@@ -1,0 +1,120 @@
+# =============================================================================
+# Bookkeeping Project - .gitignore
+# Java Spring Boot + Vue 3 + Nuxt
+# =============================================================================
+
+# =============================================================================
+# Operating System Files
+# =============================================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Build Outputs
+# =============================================================================
+
+# Gradle (Java)
+backend/build/
+backend/.gradle/
+backend/bin/
+!backend/build.gradle.kts
+!backend/.gradle/
+
+# Maven
+backend/pom.xml
+backend/*.pom
+backend/.mvn/wrapper/**
+backend/.m2/
+
+# Frontend (Node/Vue/Nuxt)
+frontend/node_modules/
+frontend/.nuxt/
+frontend/.output/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+
+# =============================================================================
+# IDE Files
+# =============================================================================
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.factorypath
+.idea/
+frontend/.idea/
+frontend/*.code-workspace
+
+# VS Code
+frontend/.vscode/
+
+# =============================================================================
+# Environment & Secrets
+# =============================================================================
+*.env
+*.env.local
+*.env.*.local
+!.env.example
+!.env.sample
+frontend/.env
+
+# Credentials (never commit)
+**/credentials.json
+**/secrets.json
+**/application-secrets.yml
+**/*.pem
+**/*.key
+**/localhost.crt
+**/localhost.key
+
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
+logs/
+**/logs/
+*.log.*
+
+# =============================================================================
+# Test Coverage
+# =============================================================================
+**/jacoco.exec
+**/coverage-reports/
+**/.nyc_output/
+**/test-results/
+
+# =============================================================================
+# Docker
+# =============================================================================
+**/Dockerfile
+**/docker-compose*.yml
+**/.docker/
+
+# =============================================================================
+# Database (local dev only)
+# =============================================================================
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/*.mv.db
+**/*.trace.db
+
+# =============================================================================
+# OS-specific
+# =============================================================================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.cache/
