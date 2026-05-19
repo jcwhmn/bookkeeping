@@ -1,6 +1,6 @@
 package com.bookkeeping.core.account;
 
-import com.bookkeeping.common.ResultCode;
+import com.bookkeeping.common.enums.AccountType;
 import com.bookkeeping.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,14 +39,13 @@ class AccountServiceTest {
         testAccount.setId(1L);
         testAccount.setUserId(1L);
         testAccount.setName("Cash");
-        testAccount.setType(com.bookkeeping.common.enums.AccountType.CASH);
+        testAccount.setType(AccountType.CASH);
         testAccount.setCurrency("USD");
         testAccount.setBalance(100000L);
         testAccount.setIcon("wallet");
         testAccount.setColor("#4CAF50");
         testAccount.setIncludeInTotal(true);
         testAccount.setArchived(false);
-        testAccount.setDeleted(false);
     }
 
     @Nested
@@ -60,11 +59,11 @@ class AccountServiceTest {
             account2.setId(2L);
             account2.setUserId(1L);
             account2.setName("Bank");
-            account2.setType(com.bookkeeping.common.enums.AccountType.CHECKING);
+            account2.setType(AccountType.CHECKING);
             account2.setCurrency("USD");
             account2.setBalance(500000L);
 
-            when(accountRepository.findAllByUserNotDeleted(1L))
+            when(accountRepository.findAllByUser(1L))
                     .thenReturn(Arrays.asList(testAccount, account2));
 
             List<AccountDto> result = accountService.getAccountsByUser(1L);
@@ -82,7 +81,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("✓ Success: get account by id")
         void getAccountById_withValidId_returnsAccountDto() {
-            when(accountRepository.findByUserAndIdNotDeleted(1L, 1L)).thenReturn(Optional.of(testAccount));
+            when(accountRepository.findByUserAndId(1L, 1L)).thenReturn(Optional.of(testAccount));
 
             AccountDto result = accountService.getAccountById(1L, 1L);
 
@@ -93,7 +92,7 @@ class AccountServiceTest {
         @Test
         @DisplayName("✗ Failure: account not found")
         void getAccountById_notFound_throwsException() {
-            when(accountRepository.findByUserAndIdNotDeleted(1L, 999L)).thenReturn(Optional.empty());
+            when(accountRepository.findByUserAndId(1L, 999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> accountService.getAccountById(1L, 999L))
                     .isInstanceOf(BusinessException.class);
@@ -157,20 +156,19 @@ class AccountServiceTest {
     class DeleteAccountTests {
 
         @Test
-        @DisplayName("✓ Success: soft delete account")
+        @DisplayName("✓ Success: delete account")
         void deleteAccount_deletesSuccessfully() {
-            when(accountRepository.findByUserAndIdNotDeleted(1L, 1L)).thenReturn(Optional.of(testAccount));
-            when(accountRepository.save(any(Account.class))).thenReturn(testAccount);
+            when(accountRepository.findByUserAndId(1L, 1L)).thenReturn(Optional.of(testAccount));
 
             accountService.deleteAccount(1L, 1L);
 
-            verify(accountRepository).save(any(Account.class));
+            verify(accountRepository).delete(testAccount);
         }
 
         @Test
         @DisplayName("✗ Failure: delete non-existent account")
         void deleteAccount_notFound_throwsException() {
-            when(accountRepository.findByUserAndIdNotDeleted(1L, 999L)).thenReturn(Optional.empty());
+            when(accountRepository.findByUserAndId(1L, 999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> accountService.deleteAccount(1L, 999L))
                     .isInstanceOf(BusinessException.class);

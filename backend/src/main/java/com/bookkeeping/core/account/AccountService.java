@@ -19,7 +19,7 @@ public class AccountService {
     
     @Transactional(readOnly = true)
     public List<AccountDto> getAccountsByUser(Long userId) {
-        return accountRepository.findAllByUserNotDeleted(userId)
+        return accountRepository.findAllByUser(userId)
             .stream()
             .map(AccountDto::fromEntity)
             .toList();
@@ -27,7 +27,7 @@ public class AccountService {
     
     @Transactional(readOnly = true)
     public AccountDto getAccountById(Long userId, Long accountId) {
-        Account account = accountRepository.findByUserAndIdNotDeleted(userId, accountId)
+        Account account = accountRepository.findByUserAndId(userId, accountId)
             .orElseThrow(() -> BusinessException.notFound(ResultCode.ACCOUNT_NOT_FOUND));
         return AccountDto.fromEntity(account);
     }
@@ -58,7 +58,7 @@ public class AccountService {
     
     @Transactional
     public AccountDto updateAccount(Long userId, Long accountId, CreateAccountRequest request) {
-        Account account = accountRepository.findByUserAndIdNotDeleted(userId, accountId)
+        Account account = accountRepository.findByUserAndId(userId, accountId)
             .orElseThrow(() -> BusinessException.notFound(ResultCode.ACCOUNT_NOT_FOUND));
         
         // Check for duplicate name (if name changed)
@@ -89,13 +89,10 @@ public class AccountService {
     
     @Transactional
     public void deleteAccount(Long userId, Long accountId) {
-        Account account = accountRepository.findByUserAndIdNotDeleted(userId, accountId)
+        Account account = accountRepository.findByUserAndId(userId, accountId)
             .orElseThrow(() -> BusinessException.notFound(ResultCode.ACCOUNT_NOT_FOUND));
         
-        account.setDeleted(true);
-        account.setDeletedUnixTime(System.currentTimeMillis() / 1000);
-        accountRepository.save(account);
-        
+        accountRepository.delete(account);
         log.info("Account deleted: {}", accountId);
     }
     

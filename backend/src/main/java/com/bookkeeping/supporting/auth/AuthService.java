@@ -19,7 +19,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByUsernameNotDeleted(request.username())
+        User user = userRepository.findByUsername(request.username())
             .orElseThrow(() -> new BusinessException(201001, "Invalid username or password"));
         
         // Check if user is disabled

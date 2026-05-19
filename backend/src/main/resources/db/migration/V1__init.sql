@@ -13,10 +13,8 @@ CREATE TABLE users (
     language VARCHAR(10) DEFAULT 'en-US',
     email_verified BOOLEAN DEFAULT FALSE,
     disabled BOOLEAN DEFAULT FALSE,
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
     modified_by BIGINT
 );
@@ -30,7 +28,7 @@ CREATE TABLE tokens (
     user_agent TEXT,
     last_active_time BIGINT,
     expires_at BIGINT NOT NULL,
-    created_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
     created_by BIGINT,
     modified_by BIGINT,
     CONSTRAINT uk_tokens_token UNIQUE (token)
@@ -49,10 +47,8 @@ CREATE TABLE accounts (
     notes TEXT,
     include_in_total BOOLEAN DEFAULT TRUE,
     archived BOOLEAN DEFAULT FALSE,
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
     modified_by BIGINT,
     CONSTRAINT uk_accounts_name_user UNIQUE (name, user_id)
@@ -68,10 +64,8 @@ CREATE TABLE categories (
     icon VARCHAR(50),
     color VARCHAR(7),
     sort_order INT DEFAULT 0,
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
     modified_by BIGINT,
     CONSTRAINT uk_categories_name_user_type UNIQUE (name, user_id, type)
@@ -84,10 +78,8 @@ CREATE TABLE tags (
     name VARCHAR(50) NOT NULL,
     color VARCHAR(7),
     icon VARCHAR(50),
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
     modified_by BIGINT,
     CONSTRAINT uk_tags_name_user UNIQUE (name, user_id)
@@ -106,12 +98,10 @@ CREATE TABLE transactions (
     related_transaction_id BIGINT REFERENCES transactions(id),
     transaction_time BIGINT NOT NULL,
     notes TEXT,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
-    modified_by BIGINT,
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT
+    modified_by BIGINT
 );
 
 -- Transaction tags (N:M)
@@ -132,12 +122,10 @@ CREATE TABLE budgets (
     rollover BOOLEAN DEFAULT FALSE,
     alert_threshold INT DEFAULT 80,
     enabled BOOLEAN DEFAULT TRUE,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
-    modified_by BIGINT,
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT
+    modified_by BIGINT
 );
 
 -- Templates table
@@ -158,12 +146,10 @@ CREATE TABLE templates (
     schedule_month INT,
     next_run_time BIGINT,
     enabled BOOLEAN DEFAULT TRUE,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     created_by BIGINT,
-    modified_by BIGINT,
-    deleted BOOLEAN DEFAULT FALSE,
-    deleted_unix_time BIGINT
+    modified_by BIGINT
 );
 
 -- Template tags
@@ -180,8 +166,8 @@ CREATE TABLE exchange_rates (
     from_currency VARCHAR(3) NOT NULL,
     to_currency VARCHAR(3) NOT NULL,
     rate DECIMAL(20, 10) NOT NULL,
-    created_unix_time BIGINT NOT NULL,
-    updated_unix_time BIGINT NOT NULL,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
     CONSTRAINT uk_exchange_rates UNIQUE (user_id, from_currency, to_currency)
 );
 
@@ -191,11 +177,11 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_tokens_user ON tokens(user_id);
 CREATE INDEX idx_tokens_token ON tokens(token);
 CREATE INDEX idx_accounts_user ON accounts(user_id);
-CREATE INDEX idx_accounts_user_archived ON accounts(user_id, archived) WHERE deleted = FALSE;
+CREATE INDEX idx_accounts_user_archived ON accounts(user_id, archived);
 CREATE INDEX idx_categories_user ON categories(user_id);
 CREATE INDEX idx_categories_parent ON categories(parent_id);
 CREATE INDEX idx_tags_user ON tags(user_id);
-CREATE INDEX idx_transactions_user_time ON transactions(user_id, transaction_time DESC) WHERE deleted = FALSE;
+CREATE INDEX idx_transactions_user_time ON transactions(user_id, transaction_time DESC);
 CREATE INDEX idx_transactions_account ON transactions(account_id);
 CREATE INDEX idx_transactions_category ON transactions(category_id);
 CREATE INDEX idx_budgets_user ON budgets(user_id);

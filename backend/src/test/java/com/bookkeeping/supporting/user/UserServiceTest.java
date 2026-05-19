@@ -48,7 +48,7 @@ class UserServiceTest {
         @Test
         @DisplayName("✓ Success: get current user DTO")
         void getCurrentUserDto_withValidId_returnsUserDto() {
-            when(userRepository.findByIdNotDeleted(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
             UserDto result = userService.getCurrentUserDto(1L);
 
@@ -60,7 +60,7 @@ class UserServiceTest {
         @Test
         @DisplayName("✗ Failure: user not found")
         void getCurrentUserDto_userNotFound_throwsException() {
-            when(userRepository.findByIdNotDeleted(999L)).thenReturn(Optional.empty());
+            when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> userService.getCurrentUserDto(999L))
                     .isInstanceOf(BusinessException.class);
@@ -74,7 +74,7 @@ class UserServiceTest {
         @Test
         @DisplayName("✓ Success: update user fields")
         void updateUser_withValidData_returnsUpdatedUserDto() {
-            when(userRepository.findByIdNotDeleted(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(testUser)).thenReturn(testUser);
 
             UserController.UpdateUserRequest request = new UserController.UpdateUserRequest(
@@ -91,7 +91,7 @@ class UserServiceTest {
         @Test
         @DisplayName("✓ Success: update partial fields")
         void updateUser_withPartialData_returnsUpdatedUserDto() {
-            when(userRepository.findByIdNotDeleted(1L)).thenReturn(Optional.of(testUser));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(userRepository.save(testUser)).thenReturn(testUser);
 
             UserController.UpdateUserRequest request = new UserController.UpdateUserRequest(
@@ -109,7 +109,7 @@ class UserServiceTest {
         @Test
         @DisplayName("✗ Failure: update non-existent user")
         void updateUser_userNotFound_throwsException() {
-            when(userRepository.findByIdNotDeleted(999L)).thenReturn(Optional.empty());
+            when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
             UserController.UpdateUserRequest request = new UserController.UpdateUserRequest("Name", "EUR", null);
 

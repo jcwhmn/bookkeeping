@@ -39,8 +39,6 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
         testUser.setLanguage("en");
         testUser.setEmailVerified(true);
         testUser.setDisabled(false);
-        testUser.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        testUser.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         testUser = userRepository.save(testUser);
 
         // Create a test account
@@ -53,8 +51,6 @@ public class UserControllerIntegrationTest extends BaseIntegrationTest {
         account.setIcon("wallet");
         account.setColor("#4CAF50");
         account.setIncludeInTotal(true);
-        account.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        account.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         accountRepository.save(account);
     }
 

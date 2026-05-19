@@ -58,7 +58,7 @@ class AuthServiceTest {
         void login_withValidCredentials_returnsLoginResponse() {
             // Given
             LoginRequest request = new LoginRequest("testuser", "password123");
-            when(userRepository.findByUsernameNotDeleted("testuser")).thenReturn(Optional.of(testUser));
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches("password123", "hashedPassword")).thenReturn(true);
             when(tokenProvider.generateAccessToken(1L, "testuser")).thenReturn("access-token");
             when(tokenProvider.generateRefreshToken(1L)).thenReturn("refresh-token");
@@ -79,7 +79,7 @@ class AuthServiceTest {
         void login_userNotFound_throwsException() {
             // Given
             LoginRequest request = new LoginRequest("nonexistent", "password123");
-            when(userRepository.findByUsernameNotDeleted("nonexistent")).thenReturn(Optional.empty());
+            when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
 
             // When/Then
             assertThatThrownBy(() -> authService.login(request))
@@ -95,7 +95,7 @@ class AuthServiceTest {
         void login_wrongPassword_throwsException() {
             // Given
             LoginRequest request = new LoginRequest("testuser", "wrongpassword");
-            when(userRepository.findByUsernameNotDeleted("testuser")).thenReturn(Optional.of(testUser));
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
             when(passwordEncoder.matches("wrongpassword", "hashedPassword")).thenReturn(false);
 
             // When/Then
@@ -113,7 +113,7 @@ class AuthServiceTest {
             // Given
             testUser.setDisabled(true);
             LoginRequest request = new LoginRequest("testuser", "password123");
-            when(userRepository.findByUsernameNotDeleted("testuser")).thenReturn(Optional.of(testUser));
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
             // When/Then
             assertThatThrownBy(() -> authService.login(request))

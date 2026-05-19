@@ -40,5 +40,6 @@ public class Account extends BaseEntity {
     @Column(name = "include_in_total")
     private Boolean includeInTotal = true;
     
+    @Column(nullable = false)
     private Boolean archived = false;
 }

@@ -40,8 +40,6 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
         testUser.setSalt("testsalt1");
         testUser.setDefaultCurrency("USD");
         testUser.setLanguage("en");
-        testUser.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        testUser.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         testUser = userRepository.save(testUser);
 
         // Create another user
@@ -53,8 +51,6 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
         anotherUser.setSalt("anothersal");
         anotherUser.setDefaultCurrency("EUR");
         anotherUser.setLanguage("de");
-        anotherUser.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        anotherUser.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         anotherUser = userRepository.save(anotherUser);
 
         // Create accounts for test user
@@ -67,8 +63,6 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
         testAccount1.setIcon("wallet");
         testAccount1.setColor("#4CAF50");
         testAccount1.setIncludeInTotal(true);
-        testAccount1.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        testAccount1.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         accountRepository.save(testAccount1);
 
         testAccount2 = new Account();
@@ -80,8 +74,6 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
         testAccount2.setIcon("account_balance");
         testAccount2.setColor("#2196F3");
         testAccount2.setIncludeInTotal(true);
-        testAccount2.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        testAccount2.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         accountRepository.save(testAccount2);
 
         // Create account for another user
@@ -94,8 +86,6 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
         anotherAccount.setIcon("wallet");
         anotherAccount.setColor("#4CAF50");
         anotherAccount.setIncludeInTotal(true);
-        anotherAccount.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        anotherAccount.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         accountRepository.save(anotherAccount);
     }
 
@@ -147,17 +137,6 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
         @DisplayName("✗ Failure: Get account by invalid ID")
         void getAccount_withInvalidId_returnsNotFound() throws Exception {
             mockMvc.perform(get("/api/v1/accounts/99999")
-                    .header("Authorization", authHeader()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.errorCode").value(204001));
-        }
-
-        @Test
-        @DisplayName("✗ Failure: Get another user's account")
-        void getAccount_ofAnotherUser_returnsNotFound() throws Exception {
-            // Should return 404 because account belongs to another user
-            mockMvc.perform(get("/api/v1/accounts/" + testAccount2.getId() + 100)
                     .header("Authorization", authHeader()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(false))
@@ -310,14 +289,14 @@ public class AccountControllerIntegrationTest extends BaseIntegrationTest {
     class DeleteAccountTests {
 
         @Test
-        @DisplayName("✓ Success: Delete account (soft delete)")
+        @DisplayName("✓ Success: Delete account")
         void deleteAccount_withValidId_returnsSuccess() throws Exception {
             mockMvc.perform(delete("/api/v1/accounts/" + testAccount2.getId())
                     .header("Authorization", authHeader()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
             
-            // Verify account is soft-deleted
+            // Verify account is deleted
             mockMvc.perform(get("/api/v1/accounts/" + testAccount2.getId())
                     .header("Authorization", authHeader()))
                     .andExpect(status().isOk())

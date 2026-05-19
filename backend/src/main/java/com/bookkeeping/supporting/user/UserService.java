@@ -16,14 +16,14 @@ public class UserService {
     
     @Transactional(readOnly = true)
     public UserDto getCurrentUserDto(Long userId) {
-        User user = userRepository.findByIdNotDeleted(userId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> BusinessException.notFound(ResultCode.USER_NOT_FOUND));
         return UserDto.fromEntity(user);
     }
     
     @Transactional
     public UserDto updateUser(Long userId, UserController.UpdateUserRequest request) {
-        User user = userRepository.findByIdNotDeleted(userId)
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> BusinessException.notFound(ResultCode.USER_NOT_FOUND));
         
         if (request.nickname() != null) {

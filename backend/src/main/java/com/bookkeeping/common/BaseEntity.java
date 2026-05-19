@@ -13,17 +13,11 @@ public abstract class BaseEntity implements Auditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Long id;
     
-    @Column(name = "deleted")
-    protected Boolean deleted = false;
+    @Column(name = "created_at", nullable = false)
+    protected Long createdAt;
     
-    @Column(name = "deleted_unix_time")
-    protected Long deletedUnixTime;
-    
-    @Column(name = "created_unix_time", nullable = false)
-    protected Long createdUnixTime;
-    
-    @Column(name = "updated_unix_time", nullable = false)
-    protected Long updatedUnixTime;
+    @Column(name = "updated_at", nullable = false)
+    protected Long updatedAt;
     
     @Column(name = "created_by")
     protected Long createdBy;
@@ -34,12 +28,12 @@ public abstract class BaseEntity implements Auditable {
     @PrePersist
     protected void onCreate() {
         long now = System.currentTimeMillis() / 1000;
-        this.createdUnixTime = now;
-        this.updatedUnixTime = now;
+        this.createdAt = now;
+        this.updatedAt = now;
     }
     
     @PreUpdate
     protected void onUpdate() {
-        this.updatedUnixTime = System.currentTimeMillis() / 1000;
+        this.updatedAt = System.currentTimeMillis() / 1000;
     }
 }

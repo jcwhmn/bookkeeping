@@ -34,8 +34,6 @@ public class AuthControllerIntegrationTest extends BaseIntegrationTest {
         user1.setLanguage("en");
         user1.setEmailVerified(true);
         user1.setDisabled(false);
-        user1.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        user1.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         userRepository.save(user1);
 
         User user2 = new User();
@@ -45,11 +43,9 @@ public class AuthControllerIntegrationTest extends BaseIntegrationTest {
         user2.setPassword(passwordEncoder.encode("password123"));
         user2.setSalt("anothersal");
         user2.setDefaultCurrency("EUR");
-        user2.setLanguage("de-DE");
+        user2.setLanguage("de");
         user2.setEmailVerified(true);
         user2.setDisabled(false);
-        user2.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        user2.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         userRepository.save(user2);
 
         User disabledUser = new User();
@@ -59,11 +55,9 @@ public class AuthControllerIntegrationTest extends BaseIntegrationTest {
         disabledUser.setPassword(passwordEncoder.encode("password123"));
         disabledUser.setSalt("disableds1");
         disabledUser.setDefaultCurrency("USD");
-        disabledUser.setLanguage("en-US");
+        disabledUser.setLanguage("en");
         disabledUser.setEmailVerified(true);
         disabledUser.setDisabled(true);
-        disabledUser.setCreatedUnixTime(System.currentTimeMillis() / 1000);
-        disabledUser.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
         userRepository.save(disabledUser);
     }
 
