@@ -82,12 +82,14 @@ Support the following account types:
 | name | String | Yes | Account name |
 | type | Enum | Yes | See account types above |
 | currency | String | Yes | ISO 4217 (USD, CNY, EUR...) |
-| balance | Decimal | Yes | Current balance |
+| balance | Decimal | Yes | Current balance (auto-calculated from transactions) |
 | icon | String | No | Icon identifier |
 | color | String | No | Hex color for UI |
 | notes | String | No | User notes |
 | includeInTotal | Boolean | Yes | Show in dashboard total (default: true) |
 | archived | Boolean | Yes | Hide from active list (default: false) |
+| ownerId | String | Yes | Owner user ID |
+| sharedWith | Array | No | List of user IDs with access |
 
 ---
 
@@ -179,6 +181,15 @@ For recurring transactions:
 - Daily, Weekly, Monthly, Yearly
 - Custom interval (every N days)
 
+### Transaction Entry
+
+| Mode | Description |
+|------|-------------|
+| Quick Entry | Minimal fields: amount, category, account. Fast for daily use. |
+| Detailed Form | All fields: notes, tags, date, time, photos. Full editing. |
+
+Users can switch between modes seamlessly - quick entry has "Edit" button to expand.
+
 ---
 
 ## 8. Budget Management
@@ -189,7 +200,8 @@ Per-category spending limits:
 |-------|------|-------------|
 | categoryId | String | Category reference |
 | amount | Decimal | Budget limit |
-| period | Enum | Monthly, Weekly, Yearly |
+| period | Enum | Monthly, Weekly, Yearly, or Custom |
+| customPeriodStart | Int | Day of month for custom period (1-28) |
 | rollover | Boolean | Unused budget carries over |
 | alertThreshold | Decimal | Alert when % used (default: 80%) |
 
@@ -244,6 +256,11 @@ Per-category spending limits:
 - Progress bars per category
 - Over-budget warnings
 
+### Export Formats
+
+- PDF (for printing/sharing)
+- Excel/CSV (for further analysis)
+
 ---
 
 ## 11. User Management
@@ -262,7 +279,8 @@ Per-category spending limits:
 ### Data Isolation
 
 - Each user's data is isolated
-- Users can share access to specific accounts (future feature)
+- Users can share access to specific accounts
+- Shared accounts visible to authorized team members
 
 ---
 
@@ -319,6 +337,10 @@ Per-category spending limits:
 | OQ6 | Bookkeeping workflow understanding? | A: Need guidance on standard bookkeeping workflows |
 | OQ7 | Category design approach? | A: Need recommendations on expense/income categories |
 | OQ8 | Report requirements? | A: Need help defining meaningful reports |
+| OQ9 | Transaction entry preference? | A: Both quick entry + detailed form |
+| OQ10 | Budget period? | A: Custom date (user-defined start day) |
+| OQ11 | Data sharing? | A: Share selected accounts with team |
+| OQ12 | Export formats? | A: PDF and Excel/CSV
 
 ---
 
