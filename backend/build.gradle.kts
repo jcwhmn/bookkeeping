@@ -139,28 +139,38 @@ tasks.register("allTestsReport") {
     dependsOn(tasks.test, tasks.named("integrationTest"))
     
     doLast {
-        // Create combined directory
         val reportDir = file("build/reports/all-tests")
-        reportDir.mkdirs()
+        if (!reportDir.exists()) reportDir.mkdirs()
         
-        // Copy unit test HTML
-        file("build/reports/tests/test").copyRecursively(file("$reportDir/unit-tests"), overwrite = true)
+        // Copy unit test HTML if exists
+        val unitSrc = file("build/reports/tests/test")
+        if (unitSrc.exists() && unitSrc.isDirectory) {
+            unitSrc.copyRecursively(file("${reportDir}/unit-tests"), true)
+        }
         
-        // Copy integration test HTML
-        file("build/reports/tests/integrationTest").copyRecursively(file("$reportDir/integration-tests"), overwrite = true)
+        // Copy integration test HTML if exists
+        val intSrc = file("build/reports/tests/integrationTest")
+        if (intSrc.exists() && intSrc.isDirectory) {
+            intSrc.copyRecursively(file("${reportDir}/integration-tests"), true)
+        }
         
-        // Generate index.html with combined summary
-        val unitTestCount = file("build/test-results/test").listFiles()?.sumOf { f -> 
-            val content = f.readText()
-            Regex("""tests="(\\d+)"""").find(content)?.groupValues?.get(1)?.toInt() ?: 0
-        } ?: 0
+        // Count tests
+        fun countTests(dir: String): Int {
+            val f = file(dir)
+            if (!f.exists()) return 0
+            return f.listFiles()
+                ?.filter { it.name.startsWith("TEST-") && it.name.endsWith(".xml") }
+                ?.sumOf { xmlFile ->
+                    Regex("""tests="(\d+)"""").find(xmlFile.readText())?.groupValues?.get(1)?.toInt() ?: 0
+                } ?: 0
+        }
         
-        val intTestCount = file("build/test-results/integrationTest").listFiles()?.sumOf { f -> 
-            val content = f.readText()
-            Regex("""tests="(\\d+)"""").find(content)?.groupValues?.get(1)?.toInt() ?: 0
-        } ?: 0
+        val unitCount = countTests("build/test-results/test")
+        val intCount = countTests("build/test-results/integrationTest")
+        val total = unitCount + intCount
         
-        val indexHtml = """
+        // Create index.html
+        val html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -168,40 +178,42 @@ tasks.register("allTestsReport") {
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .summary { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .pass { color: green; }
-        .fail { color: red; }
+        .pass { color: green; font-size: 18px; }
         h1 { color: #333; }
-        .link { margin: 10px 0; }
-        .link a { margin-right: 20px; }
+        .link { margin: 10px 0; font-size: 16px; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <h1>All Tests Report</h1>
     <div class="summary">
         <h2>Summary</h2>
-        <p>Total Tests: <strong>${'$'}{unitTestCount + intTestCount}</strong></p>
-        <p>Unit Tests: ${'$'}{unitTestCount}</p>
-        <p>Integration Tests: ${'$'}{intTestCount}</p>
-        <p class="pass">All tests passed! ✓</p>
+        <p>Total Tests: <strong>${total}</strong></p>
+        <p>Unit Tests: ${unitCount}</p>
+        <p>Integration Tests: ${intCount}</p>
+        <p class="pass">All tests passed!</p>
     </div>
     <div class="links">
         <h3>Detailed Reports</h3>
-        <div class="link"><a href="unit-tests/index.html">Unit Tests Report</a></div>
-        <div class="link"><a href="integration-tests/index.html">Integration Tests Report</a></div>
+        <p class="link"><a href="unit-tests/index.html">Unit Tests Report</a></p>
+        <p class="link"><a href="integration-tests/index.html">Integration Tests Report</a></p>
     </div>
 </body>
 </html>
         """.trimIndent()
         
-        file("$reportDir/index.html").writeText(indexHtml)
+        file("${reportDir}/index.html").writeText(html)
         
-        println("\n===========================================")
+        println()
+        println("===========================================")
         println("  TEST REPORT GENERATED")
         println("===========================================")
-        println("  Location: $reportDir/index.html")
-        println("  Unit Tests: $unitTestCount")
-        println("  Integration Tests: $intTestCount")
-        println("  Total: ${'$'}{unitTestCount + intTestCount}")
-        println("===========================================\n")
+        println("  Location: ${reportDir.absolutePath}/index.html")
+        println("  Unit Tests: ${unitCount}")
+        println("  Integration Tests: ${intCount}")
+        println("  Total: ${total}")
+        println("===========================================")
+        println()
     }
 }
