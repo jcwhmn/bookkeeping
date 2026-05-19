@@ -8,18 +8,19 @@
 We need to store financial data with:
 - Accurate amount calculations (no floating point errors)
 - Multi-currency support
-- Audit trail (soft delete)
+- Audit trail (soft delete + who created/modified)
 - Multi-user with data isolation
 
 ## Decision
 
 | Aspect | Design | Example |
-|--------|--------|---------|
+|--------|---------|---------|
 | Database | PostgreSQL 17+ | - |
 | Amount | BIGINT (cents/fen) | 5000 = $50.00 |
 | Timestamps | Unix epoch seconds (BIGINT) | 1717104000 |
 | Soft Delete | `deleted` flag + `deleted_unix_time` | - |
 | Multi-tenancy | User isolation via `user_id` | - |
+| Audit | `created_by` + `modified_by` | Track WHO made changes |
 
 ### Amount Convention
 
@@ -47,6 +48,14 @@ ALTER TABLE transactions ADD COLUMN deleted_unix_time BIGINT;
 
 Queries always filter `WHERE deleted = FALSE`.
 
+### Audit Columns
+
+```sql
+-- All tables have these columns
+created_by BIGINT REFERENCES users(id);
+modified_by BIGINT REFERENCES users(id);
+```
+
 ## Rationale
 
 | Aspect | Decision | Reason |
@@ -55,6 +64,7 @@ Queries always filter `WHERE deleted = FALSE`.
 | Unix timestamps | Standard format | Easy serialization, timezone handling |
 | Soft delete | Data preservation | Accidental deletion recoverable |
 | User isolation | Query filter | Simple, no row-level security complexity |
+| Audit columns | created_by/modified_by | Track WHO made changes (not just WHEN) |
 
 ## Consequences
 
@@ -62,6 +72,7 @@ Queries always filter `WHERE deleted = FALSE`.
 - Accurate financial calculations
 - Consistent timestamp format
 - Data recoverable after accidental deletion
+- Full audit trail (who + when)
 
 ### Negative
 - Frontend must divide by 100 for display

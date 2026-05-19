@@ -8,42 +8,46 @@
 We need consistent patterns across entities and services for:
 - Common fields (id, timestamps)
 - Reusable base classes
+- Audit trail (who created/modified)
 - Reduced boilerplate
 
 ## Decision
 
-### 1. Base Entity Class
+### 1. Auditable Interface (Optional)
+
+```java
+// Auditable.java - Optional interface for audit fields
+public interface Auditable {
+    Long getCreatedBy();
+    void setCreatedBy(Long createdBy);
+    Long getModifiedBy();
+    void setModifiedBy(Long modifiedBy);
+}
+```
+
+### 2. Base Entity Class
 
 ```java
 // BaseEntity.java
-public abstract class BaseEntity {
+public abstract class BaseEntity implements Auditable {
     protected Long id;
     protected Boolean deleted = false;
     protected Long deletedUnixTime;
     protected Long createdUnixTime;
     protected Long updatedUnixTime;
     
+    // Audit fields (from Auditable)
+    protected Long createdBy;
+    protected Long modifiedBy;
+    
     // Getters/Setters with JPA lifecycle hooks
-    // @PrePersist, @PreUpdate
 }
 ```
 
-All entities extend `BaseEntity`:
+**Note**: `BaseEntity implements Auditable` so all entities have audit fields.
+If you need an entity WITHOUT audit fields, it can implement just the base without Auditable.
 
-```java
-// Account.java
-@Entity
-@Table(name = "accounts")
-public class Account extends BaseEntity {
-    private String name;
-    private String type;
-    private String currency;
-    private Long balance; // in cents
-    // ... other fields
-}
-```
-
-### 2. Base Service Class
+### 3. Base Service Class
 
 ```java
 // BaseService.java
@@ -51,15 +55,24 @@ public abstract class BaseService<T extends BaseEntity> {
     
     protected abstract BaseRepository<T> getRepository();
     
+    protected Long getCurrentUserId() {
+        // Get from SecurityContext
+    }
+    
     public Optional<T> findById(Long id) {
         return getRepository().findByIdNotDeleted(id);
     }
     
     public T save(T entity) {
-        entity.setUpdatedUnixTime(System.currentTimeMillis() / 1000);
+        Long now = System.currentTimeMillis() / 1000;
+        entity.setUpdatedUnixTime(now);
+        
         if (entity.getId() == null) {
-            entity.setCreatedUnixTime(entity.getUpdatedUnixTime());
+            entity.setCreatedUnixTime(now);
+            entity.setCreatedBy(getCurrentUserId());
         }
+        entity.setModifiedBy(getCurrentUserId());
+        
         return getRepository().save(entity);
     }
     
@@ -71,7 +84,7 @@ public abstract class BaseService<T extends BaseEntity> {
 }
 ```
 
-### 3. DTO as Java Records
+### 4. DTO as Java Records
 
 DTOs are immutable **Java Records** (no hierarchical structure):
 
@@ -94,7 +107,7 @@ public record AccountDto(
 }
 ```
 
-### 4. Base Repository Pattern
+### 5. Base Repository Pattern
 
 ```java
 // BaseRepository.java
@@ -105,9 +118,8 @@ public interface BaseRepository<T extends BaseEntity>
     
     List<T> findAllNotDeletedByUserId(Long userId);
     
-    @Override
-    @Query("WHERE deleted = false")
-    List<T> findAll();
+    @Query("WHERE t.deleted = false")
+    List<T> findAllNotDeleted();
 }
 ```
 
@@ -115,9 +127,11 @@ public interface BaseRepository<T extends BaseEntity>
 
 | Aspect | Decision | Reason |
 |-------|----------|--------|
+| Auditable Interface | `implements Auditable` | Optional audit fields per entity type |
 | Base Entity | Single class with id + timestamps | DRY, consistent |
 | Soft Delete | In BaseEntity | All entities support deletion |
-| Base Service | Template methods | Reduced boilerplate in services |
+| Audit Trail | createdBy, modifiedBy | Track WHO made changes |
+| Base Service | Template methods | Reduced boilerplate, sets audit fields |
 | DTO Records | Flat records, no inheritance | Simple, immutable, less nesting |
 | Timestamps | Unix seconds (BIGINT) | Consistent with database design |
 
@@ -126,8 +140,9 @@ public interface BaseRepository<T extends BaseEntity>
 ### Positive
 - Less boilerplate
 - Consistent entity structure
-- Easy to add common fields
+- Audit trail tracks WHO (not just WHEN)
 - Immutable DTOs prevent mutation bugs
+- Service layer auto-sets audit fields
 
 ### Negative
 - Inheritance coupling (minimal)
