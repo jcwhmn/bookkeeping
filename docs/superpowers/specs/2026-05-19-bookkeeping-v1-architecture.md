@@ -698,13 +698,15 @@ GET /api/v1/reports/monthly?year=2024&month=5&accountId=123
 | Build Tool | Gradle (Kotlin DSL) | 9.3 |
 | Java | OpenJDK | 25 |
 | ORM | Spring Data JPA + Hibernate | 6.x |
-| Database | PostgreSQL | 17+ |
-| Migration | Flyway | 11.4.1 |
-| Auth | JJWT | 0.12.6 |
-| Mapping | MapStruct | 1.6.3 |
-| Boilerplate | Lombok | 1.18.38 |
-| API Docs | SpringDoc OpenAPI | 2.8.8 |
-| Testing | JUnit 5 + Mockito | Latest |
+| Database | PostgreSQL | 18+ |
+| Migration | Flyway | 11.x |
+| Auth | JJWT | 0.12.x |
+| Mapping | mapstruct-ext | 1.0.x |
+| Boilerplate | Lombok | 1.18.x |
+| API Docs | SpringDoc OpenAPI | 2.9.x |
+| Caching | Caffeine | 3.x |
+| Validation | Jakarta Bean Validation | 3.x |
+| Testing | JUnit 5 + Mockito + AssertJ | Latest |
 
 ### 6.2 Frontend
 
