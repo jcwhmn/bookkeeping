@@ -13,7 +13,7 @@
 
 | User Type | Description |
 |-----------|-------------|
-| Primary | Small team (2-5 members) |
+| Primary | Small team (~20 members, estimate) |
 | Secondary | Family members tracking personal expenses |
 
 ### User Stories
@@ -75,6 +75,20 @@ Support the following account types:
 | Loyalty/Points | Airline miles, hotel points | Point-based |
 | Other | Custom accounts | User-defined |
 
+### Account Properties
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | String | Yes | Account name |
+| type | Enum | Yes | See account types above |
+| currency | String | Yes | ISO 4217 (USD, CNY, EUR...) |
+| balance | Decimal | Yes | Current balance |
+| icon | String | No | Icon identifier |
+| color | String | No | Hex color for UI |
+| notes | String | No | User notes |
+| includeInTotal | Boolean | Yes | Show in dashboard total (default: true) |
+| archived | Boolean | Yes | Hide from active list (default: false) |
+
 ---
 
 ## 4. Transaction Types
@@ -84,11 +98,38 @@ Support the following account types:
 | Income | + | Salary, bonus, refund |
 | Expense | - | Groceries, transport, utilities |
 | Transfer | 0 | Move money between accounts |
-| Modify Balance | ± | Correction, interest |
+| Modify Balance | +/- | Correction, interest |
 
 ---
 
 ## 5. Category System
+
+### Hierarchical Structure
+
+```
+Income
+├── Salary
+│   ├── Monthly Salary
+│   └── Bonus
+├── Investment
+│   ├── Dividends
+│   └── Interest
+└── Other Income
+
+Expense
+├── Food
+│   ├── Groceries
+│   └── Restaurants
+├── Transport
+│   ├── Public Transit
+│   └── Fuel
+├── Housing
+│   ├── Rent/Mortgage
+│   └── Utilities
+├── Entertainment
+├── Healthcare
+└── ...
+```
 
 ### Default Categories (Pre-seeded)
 
@@ -104,6 +145,12 @@ Support the following account types:
 
 Tags are optional labels for transactions.
 
+| Field | Type | Description |
+|-------|------|-------------|
+| name | String | Tag name (unique per user) |
+| color | String | Hex color |
+| icon | String | Icon identifier |
+
 **Use Cases:**
 - Mark business vs personal expenses
 - Track tax-deductible items (#tax-deductible)
@@ -114,7 +161,22 @@ Tags are optional labels for transactions.
 ## 7. Transaction Templates
 
 For recurring transactions:
-- Daily, Weekly, Monthly, Yearly schedules
+
+| Field | Type | Description |
+|-------|------|-------------|
+| name | String | Template name |
+| type | Enum | INCOME, EXPENSE, TRANSFER |
+| amount | Decimal | Transaction amount |
+| currency | String | ISO 4217 |
+| accountId | String | Target account |
+| categoryId | String | Category |
+| tagIds | Array | Tags |
+| notes | String | Default notes |
+| schedule | Object | Frequency + next run date |
+| enabled | Boolean | Active/inactive |
+
+**Schedule Options:**
+- Daily, Weekly, Monthly, Yearly
 - Custom interval (every N days)
 
 ---
@@ -122,39 +184,141 @@ For recurring transactions:
 ## 8. Budget Management
 
 Per-category spending limits:
-- Monthly, Weekly, Yearly periods
-- Alert when threshold reached (default: 80%)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| categoryId | String | Category reference |
+| amount | Decimal | Budget limit |
+| period | Enum | Monthly, Weekly, Yearly |
+| rollover | Boolean | Unused budget carries over |
+| alertThreshold | Decimal | Alert when % used (default: 80%) |
+
+**Alert Behavior:**
+- When transaction makes category reach threshold --> push notification
+- Visual indicator on dashboard
 
 ---
 
 ## 9. Multi-Currency Support
 
-- Each account has one currency
-- User-defined exchange rates
-- Base currency for display
+### Requirements
+
+| Feature | Description |
+|---------|-------------|
+| Account currency | Each account has one currency |
+| Transaction currency | Inherit from account or override |
+| Exchange rates | User-defined rates or API fetch |
+| Conversion | Show amounts in account currency |
+| Base currency | User sets preferred display currency |
 
 ### Supported Currencies (v1.0)
-- USD, CNY, EUR, GBP, JPY, HKD, SGD, TWD, KRW, THB
+- USD, CNY, EUR, GBP, JPY, HKD, SGD, TWD, KRW, THB, ...
+- Extensible list
 
 ---
 
 ## 10. Reports & Statistics
 
-- Monthly Summary (income, expense, net savings)
-- Category Breakdown (pie/bar charts)
-- Cash Flow trend
-- Budget Status progress bars
+### Monthly Summary
+
+| Metric | Description |
+|--------|-------------|
+| Total income | Sum of all income transactions |
+| Total expense | Sum of all expense transactions |
+| Net savings | Income - Expense |
+| Top categories | Top 5 spending categories |
+| Comparison | vs previous month |
+
+### Category Breakdown
+
+- Pie chart: Expense by category
+- Bar chart: Income vs Expense by month
+
+### Cash Flow
+
+- Line chart: Balance trend over time
+- Projection: Based on recurring transactions
+
+### Budget Status
+
+- Progress bars per category
+- Over-budget warnings
 
 ---
 
-## 11. Open Questions
+## 11. User Management
 
-| # | Question | Options |
-|---|----------|---------|
-| OQ1 | How to handle bank feed import? | Manual CSV only for v1.0 |
-| OQ2 | Should transfer between currencies convert automatically? | User confirms rate at transaction time |
-| OQ3 | Team sharing model? | Each user has own data + shared accounts (future) |
-| OQ4 | Mobile app or web-only? | Web (Nuxt) responsive for v1.0 |
+### User Properties
+
+| Field | Type | Description |
+|-------|------|-------------|
+| username | String | Login name |
+| email | String | Email address |
+| nickname | String | Display name |
+| password | String | Hashed password |
+| defaultCurrency | String | Preferred currency |
+| defaultAccountId | String | Default account for quick entry |
+
+### Data Isolation
+
+- Each user's data is isolated
+- Users can share access to specific accounts (future feature)
+
+---
+
+## 12. Authentication
+
+| Feature | Included |
+|---------|----------|
+| Username/Password login | YES |
+| Registration | YES |
+| JWT session token | YES |
+| Session refresh | YES |
+| Password reset (email) | YES |
+
+**Excluded for v1.0:**
+- OAuth/OIDC (GitHub, Google, etc.)
+- 2FA/TOTP
+- API tokens
+
+---
+
+## 13. Technical Constraints
+
+| Constraint | Value |
+|------------|-------|
+| Database | PostgreSQL 17+ |
+| Amount precision | BIGINT (cents/fen) |
+| Timestamps | Unix epoch seconds |
+| Soft delete | Yes |
+| Multi-tenancy | Single database, user isolation via user_id |
+
+---
+
+## 14. Out of Scope (Forever or Later)
+
+- Bank reconciliation (automatic matching)
+- Receipt scanning/OCR
+- AI transaction categorization
+- Mobile native app
+- MCP protocol
+- Cloud sync
+- Multi-currency automated exchange rates
+
+---
+
+## 15. Open Questions
+
+| # | Question | Answer |
+|---|----------|--------|
+| OQ1 | How to handle bank feed import? | A: Manual CSV import only for v1.0 |
+| OQ2 | Should transfer between currencies convert automatically? | A: User confirms rate at transaction time |
+| OQ3 | Team sharing model? | A: Each user has own data + shared accounts (future) |
+| OQ4 | Mobile app or web-only? | A: Web (Nuxt) responsive for v1.0 |
+| OQ5 | Team size? | A: ~20 members (estimate, not sure) |
+| OQ6 | Bookkeeping workflow understanding? | A: Need guidance on standard bookkeeping workflows |
+| OQ7 | Category design approach? | A: Need recommendations on expense/income categories |
+| OQ8 | Report requirements? | A: Need help defining meaningful reports |
 
 ---
 
@@ -167,5 +331,6 @@ Per-category spending limits:
 | Category | Classification of transaction type |
 | Tag | Optional label for additional grouping |
 | Budget | Spending limit per category |
+| Reconciliation | Matching transactions with bank statement |
 | Transfer | Moving money between accounts |
 | Soft delete | Marking as deleted without removing from database |
