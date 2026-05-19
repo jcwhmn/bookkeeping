@@ -1,0 +1,31 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+  "name": "Bookkeeping Backend",
+  "dockerComposeFile": ["../docker-compose.yml", "../docker-compose.dev.yml"],
+  "service": "backend",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "25",
+      "maven": "3.9"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.java",
+        "vadimcn.vscode-lombok",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2g -Xms100m"
+      }
+    }
+  },
+  "postCreateCommand": "cd backend && gradle build --no-daemon -x test",
+  "forwardPorts": [8080, 5432],
+  "runServices": ["postgresql"]
+}

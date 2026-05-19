@@ -1,0 +1,4584 @@
+openapi: "3.1.0"
+info:
+  title: ezBookkeeping API
+  description: |
+    ezBookkeeping is a lightweight, self-hosted personal finance app. This document describes its REST API and MCP (Model Context Protocol) endpoints.
+
+    ## Authentication
+    - **JWT Bearer Token**: Most `/api/v1/` endpoints require a valid JWT token passed via `Authorization: Bearer <token>` header.
+    - **API/MCP Token**: Tokens generated via `/api/v1/tokens/generate/api.json` or `/api/v1/tokens/generate/mcp.json` can be used for API/MCP access.
+    - **Cookie-based auth**: Used by browser clients.
+
+    ## Response Format
+    All REST API responses follow a standard envelope:
+    ```json
+    {
+      "success": true|false,
+      "result": { ... },         // on success
+      "errorCode": 200001,       // on error
+      "errorMessage": "...",     // on error
+      "path": "/api/..."         // on error
+    }
+    ```
+
+    ## Error Codes
+    Errors follow the format: `category * 100000 + subCategory * 1000 + index`
+    - System errors: `1xxxxx`
+    - Normal errors: `2xxxxx`
+    - Sub-categories: 0=Global, 1=User, 2=Token, 3=2FA, 4=Account, 5=Transaction, 6=Category, 7=Tag, 8=Data, 14=MCP, 15=LLM, etc.
+
+    ## Transaction Types
+    - `1` = Modify Balance
+    - `2` = Income
+    - `3` = Expense
+    - `4` = Transfer
+
+    ## Account Categories
+    - `1` = Cash, `2` = Checking, `3` = Credit Card, `4` = Virtual
+    - `5` = Debt, `6` = Receivables, `7` = Investment, `8` = Savings, `9` = Certificate of Deposit
+
+    ## Category Types
+    - `1` = Income, `2` = Expense, `3` = Transfer
+  version: "1.0.0"
+  contact:
+    name: ezBookkeeping
+    url: "https://github.com/mayswind/ezbookkeeping"
+
+servers:
+  - url: "http://localhost:8080"
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Authentication and authorization
+  - name: Users
+    description: User profile management
+  - name: Tokens
+    description: Token management (API/MCP tokens, token list, refresh, revoke)
+  - name: Accounts
+    description: Account management (two-level: parent and sub-accounts)
+  - name: Transactions
+    description: Transaction CRUD, search, statistics, batch operations, import/export
+  - name: Transaction Categories
+    description: Two-level transaction categories (income/expense/transfer)
+  - name: Transaction Tags
+    description: Tag management
+  - name: Transaction Tag Groups
+    description: Tag group management
+  - name: Transaction Templates
+    description: Normal and scheduled transaction templates
+  - name: Transaction Pictures
+    description: Upload and manage transaction picture attachments
+  - name: Insights Explorers
+    description: Saved insights/chart explorer configurations
+  - name: Exchange Rates
+    description: Latest exchange rates and user custom rates
+  - name: Data Management
+    description: Data statistics, clear, export
+  - name: Two-Factor Auth
+    description: Two-factor authentication (2FA) management
+  - name: External Auth
+    description: OIDC / OAuth 2.0 external authentication
+  - name: Application Cloud Settings
+    description: Sync user app settings across devices
+  - name: LLM
+    description: AI-powered receipt image recognition
+  - name: MCP
+    description: Model Context Protocol server endpoints
+  - name: System
+    description: Health check, version, server settings
+  - name: Password Reset
+    description: Forget/reset password flow
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ====================================================================
+  #  System / Public Endpoints
+  # ====================================================================
+  /healthz.json:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Returns server health status. Available without authentication.
+      security: []
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /server_settings.js:
+    get:
+      tags: [System]
+      summary: Get server settings as JavaScript
+      description: Returns server-side settings as a JavaScript file for the frontend.
+      security: []
+      responses:
+        "200":
+          description: JavaScript file with server settings
+          content:
+            text/javascript:
+              schema:
+                type: string
+
+  /api/systems/version.json:
+    get:
+      tags: [System]
+      summary: Get server version
+      description: Returns the current server version information.
+      responses:
+        "200":
+          description: Version info
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: object
+                        properties:
+                          version:
+                            type: string
+                          commitHash:
+                            type: string
+                          buildTime:
+                            type: string
+
+  # ====================================================================
+  #  Authentication Endpoints (no BearerAuth required)
+  # ====================================================================
+  /api/authorize.json:
+    post:
+      tags: [Auth]
+      summary: Login / authorize
+      description: Login with username/email and password. Returns a JWT token on success.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLoginRequest"
+      responses:
+        "200":
+          description: Authorization successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AuthResponse"
+
+  /api/register.json:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Register a new user account. Optionally allows batch creation of preset categories.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterRequest"
+      responses:
+        "200":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/RegisterResponse"
+
+  /api/logout.json:
+    get:
+      tags: [Auth]
+      summary: Logout / revoke current token
+      description: Revokes the current JWT token.
+      responses:
+        "200":
+          description: Logout successful
+
+  # ====================================================================
+  #  2FA Endpoints (requires 2FA intermediate token)
+  # ====================================================================
+  /api/2fa/authorize.json:
+    post:
+      tags: [Auth]
+      summary: Complete 2FA login
+      description: Submit TOTP passcode to complete two-factor authentication login.
+      security: [] # Uses 2FA intermediate token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorLoginRequest"
+      responses:
+        "200":
+          description: 2FA authorization successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AuthResponse"
+
+  /api/2fa/recovery.json:
+    post:
+      tags: [Auth]
+      summary: 2FA recovery code login
+      description: Login using a 2FA recovery code.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorRecoveryCodeLoginRequest"
+      responses:
+        "200":
+          description: Recovery authorization successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AuthResponse"
+
+  # ====================================================================
+  #  OAuth2 / OIDC Endpoints (no BearerAuth)
+  # ====================================================================
+  /oauth2/login:
+    get:
+      tags: [External Auth]
+      summary: Initiate OAuth2/OIDC login
+      description: Redirects to the OAuth 2.0 provider's login page.
+      security: []
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+          description: OAuth2 platform identifier
+        - name: client_session_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to OAuth2 provider
+
+  /oauth2/callback:
+    get:
+      tags: [External Auth]
+      summary: OAuth2/OIDC callback
+      description: Callback endpoint for the OAuth 2.0 provider after user authentication.
+      security: []
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: error
+          in: query
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to frontend
+
+  /api/oauth2/authorize.json:
+    post:
+      tags: [External Auth]
+      summary: Finalize OAuth2 callback login
+      description: Complete OAuth2 login after callback verification. May require password or 2FA.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuth2CallbackLoginRequest"
+      responses:
+        "200":
+          description: OAuth2 authorization successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AuthResponse"
+
+  # ====================================================================
+  #  Email Verification Endpoints
+  # ====================================================================
+  /api/verify_email/resend.json:
+    post:
+      tags: [Auth]
+      summary: Resend email verification (unauthenticated)
+      description: Request a new email verification email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserResendVerifyEmailRequest"
+      responses:
+        "200":
+          description: Verification email resent
+
+  /api/verify_email/by_token.json:
+    post:
+      tags: [Auth]
+      summary: Verify email by token
+      description: Verify email address using a verification token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserVerifyEmailRequest"
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/UserVerifyEmailResponse"
+
+  # ====================================================================
+  #  Password Reset Endpoints
+  # ====================================================================
+  /api/forget_password/request.json:
+    post:
+      tags: [Password Reset]
+      summary: Request password reset
+      description: Sends a password reset email to the specified email address.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgetPasswordRequest"
+      responses:
+        "200":
+          description: Reset email sent
+
+  /api/forget_password/reset/by_token.json:
+    post:
+      tags: [Password Reset]
+      summary: Reset password by token
+      description: Reset password using a reset token from email.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "200":
+          description: Password reset successful
+
+  # ====================================================================
+  #  Token Management
+  # ====================================================================
+  /api/v1/tokens/list.json:
+    get:
+      tags: [Tokens]
+      summary: List all tokens
+      description: Returns a list of all active tokens for the current user.
+      responses:
+        "200":
+          description: Token list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TokenInfoResponseSlice"
+
+  /api/v1/tokens/generate/api.json:
+    post:
+      tags: [Tokens]
+      summary: Generate API token
+      description: Generate a new long-lived API token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenGenerateAPIRequest"
+      responses:
+        "200":
+          description: API token generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TokenGenerateAPIResponse"
+
+  /api/v1/tokens/generate/mcp.json:
+    post:
+      tags: [Tokens]
+      summary: Generate MCP token
+      description: Generate a new MCP (Model Context Protocol) access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenGenerateMCPRequest"
+      responses:
+        "200":
+          description: MCP token generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TokenGenerateMCPResponse"
+
+  /api/v1/tokens/revoke.json:
+    post:
+      tags: [Tokens]
+      summary: Revoke a specific token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenRevokeRequest"
+      responses:
+        "200":
+          description: Token revoked
+
+  /api/v1/tokens/revoke_all.json:
+    post:
+      tags: [Tokens]
+      summary: Revoke all tokens
+      description: Revokes all tokens except the current one.
+      responses:
+        "200":
+          description: All tokens revoked
+
+  /api/v1/tokens/refresh.json:
+    post:
+      tags: [Tokens]
+      summary: Refresh current token
+      description: Refreshes the current JWT token, returning a new token and updated user info.
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TokenRefreshResponse"
+
+  # ====================================================================
+  #  User Profile
+  # ====================================================================
+  /api/v1/users/profile/get.json:
+    get:
+      tags: [Users]
+      summary: Get user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/UserProfileResponse"
+
+  /api/v1/users/profile/update.json:
+    post:
+      tags: [Users]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdateRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/UserProfileUpdateResponse"
+
+  /api/v1/users/avatar/update.json:
+    post:
+      tags: [Users]
+      summary: Upload user avatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Avatar updated
+
+  /api/v1/users/avatar/remove.json:
+    post:
+      tags: [Users]
+      summary: Remove user avatar
+      responses:
+        "200":
+          description: Avatar removed
+
+  /api/v1/users/verify_email/resend.json:
+    post:
+      tags: [Users]
+      summary: Resend email verification (authenticated)
+      responses:
+        "200":
+          description: Verification email resent
+
+  # ====================================================================
+  #  External Auth (Authenticated)
+  # ====================================================================
+  /api/v1/users/external_auth/list.json:
+    get:
+      tags: [External Auth]
+      summary: List external auth links
+      responses:
+        "200":
+          description: External auth list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/UserExternalAuthInfoResponsesSlice"
+
+  /api/v1/users/external_auth/unlink.json:
+    post:
+      tags: [External Auth]
+      summary: Unlink external auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserExternalAuthUnlinkRequest"
+      responses:
+        "200":
+          description: External auth unlinked
+
+  # ====================================================================
+  #  Application Cloud Settings
+  # ====================================================================
+  /api/v1/users/settings/cloud/get.json:
+    get:
+      tags: [Application Cloud Settings]
+      summary: Get cloud application settings
+      responses:
+        "200":
+          description: Application cloud settings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/ApplicationCloudSettingSlice"
+
+  /api/v1/users/settings/cloud/update.json:
+    post:
+      tags: [Application Cloud Settings]
+      summary: Update cloud application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserApplicationCloudSettingsUpdateRequest"
+      responses:
+        "200":
+          description: Settings updated
+
+  /api/v1/users/settings/cloud/disable.json:
+    post:
+      tags: [Application Cloud Settings]
+      summary: Disable cloud application settings sync
+      responses:
+        "200":
+          description: Cloud sync disabled
+
+  # ====================================================================
+  #  Two-Factor Authentication (Authenticated)
+  # ====================================================================
+  /api/v1/users/2fa/status.json:
+    get:
+      tags: [Two-Factor Auth]
+      summary: Get 2FA status
+      responses:
+        "200":
+          description: 2FA status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TwoFactorStatusResponse"
+
+  /api/v1/users/2fa/enable/request.json:
+    post:
+      tags: [Two-Factor Auth]
+      summary: Request to enable 2FA
+      description: Returns a TOTP secret and QR code for setup.
+      responses:
+        "200":
+          description: 2FA enable request
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TwoFactorEnableResponse"
+
+  /api/v1/users/2fa/enable/confirm.json:
+    post:
+      tags: [Two-Factor Auth]
+      summary: Confirm enable 2FA
+      description: Confirms 2FA setup with a TOTP passcode.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorEnableConfirmRequest"
+      responses:
+        "200":
+          description: 2FA enabled
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TwoFactorEnableConfirmResponse"
+
+  /api/v1/users/2fa/disable.json:
+    post:
+      tags: [Two-Factor Auth]
+      summary: Disable 2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorDisableRequest"
+      responses:
+        "200":
+          description: 2FA disabled
+
+  /api/v1/users/2fa/recovery/regenerate.json:
+    post:
+      tags: [Two-Factor Auth]
+      summary: Regenerate 2FA recovery codes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorRegenerateRecoveryCodeRequest"
+      responses:
+        "200":
+          description: Recovery codes regenerated
+
+  # ====================================================================
+  #  Data Management
+  # ====================================================================
+  /api/v1/data/statistics.json:
+    get:
+      tags: [Data Management]
+      summary: Get data statistics
+      description: Returns counts of accounts, categories, tags, transactions, pictures, explorers and templates.
+      responses:
+        "200":
+          description: Data statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/DataStatisticsResponse"
+
+  /api/v1/data/clear/all.json:
+    post:
+      tags: [Data Management]
+      summary: Clear all user data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearDataRequest"
+      responses:
+        "200":
+          description: All data cleared
+
+  /api/v1/data/clear/transactions.json:
+    post:
+      tags: [Data Management]
+      summary: Clear all transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearDataRequest"
+      responses:
+        "200":
+          description: Transactions cleared
+
+  /api/v1/data/clear/transactions/by_account.json:
+    post:
+      tags: [Data Management]
+      summary: Clear transactions by account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearAccountTransactionsRequest"
+      responses:
+        "200":
+          description: Account transactions cleared
+
+  /api/v1/data/export.csv:
+    get:
+      tags: [Data Management]
+      summary: Export data as CSV
+      parameters:
+        - $ref: "#/components/parameters/TransactionTypeFilter"
+        - $ref: "#/components/parameters/CategoryIds"
+        - $ref: "#/components/parameters/AccountIds"
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/AmountFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/MaxTime"
+        - $ref: "#/components/parameters/MinTime"
+      responses:
+        "200":
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+
+  /api/v1/data/export.tsv:
+    get:
+      tags: [Data Management]
+      summary: Export data as TSV
+      parameters:
+        - $ref: "#/components/parameters/TransactionTypeFilter"
+        - $ref: "#/components/parameters/CategoryIds"
+        - $ref: "#/components/parameters/AccountIds"
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/AmountFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/MaxTime"
+        - $ref: "#/components/parameters/MinTime"
+      responses:
+        "200":
+          description: TSV file download
+          content:
+            text/tab-separated-values:
+              schema:
+                type: string
+
+  # ====================================================================
+  #  Accounts
+  # ====================================================================
+  /api/v1/accounts/list.json:
+    get:
+      tags: [Accounts]
+      summary: List all accounts
+      parameters:
+        - name: visible_only
+          in: query
+          schema:
+            type: boolean
+          description: Only return visible (non-hidden) accounts
+      responses:
+        "200":
+          description: Account list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AccountInfoResponse"
+
+  /api/v1/accounts/get.json:
+    get:
+      tags: [Accounts]
+      summary: Get a single account
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Account ID (passed as string)
+      responses:
+        "200":
+          description: Account details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AccountInfoResponse"
+
+  /api/v1/accounts/add.json:
+    post:
+      tags: [Accounts]
+      summary: Create a new account
+      description: Create a new account, optionally with sub-accounts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountCreateRequest"
+      responses:
+        "200":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AccountInfoResponse"
+
+  /api/v1/accounts/modify.json:
+    post:
+      tags: [Accounts]
+      summary: Modify an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountModifyRequest"
+      responses:
+        "200":
+          description: Account modified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/AccountInfoResponse"
+
+  /api/v1/accounts/hide.json:
+    post:
+      tags: [Accounts]
+      summary: Hide/unhide an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountHideRequest"
+      responses:
+        "200":
+          description: Account hidden/unhidden
+
+  /api/v1/accounts/move.json:
+    post:
+      tags: [Accounts]
+      summary: Reorder accounts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountMoveRequest"
+      responses:
+        "200":
+          description: Accounts reordered
+
+  /api/v1/accounts/delete.json:
+    post:
+      tags: [Accounts]
+      summary: Delete an account (and its sub-accounts)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeleteRequest"
+      responses:
+        "200":
+          description: Account deleted
+
+  /api/v1/accounts/sub_account/delete.json:
+    post:
+      tags: [Accounts]
+      summary: Delete a sub-account
+      description: Delete a sub-account only. The ID must be a sub-account ID. Use with caution — associated transactions are moved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeleteRequest"
+      responses:
+        "200":
+          description: Sub-account deleted
+
+  # ====================================================================
+  #  Transactions
+  # ====================================================================
+  /api/v1/transactions/count.json:
+    get:
+      tags: [Transactions]
+      summary: Count transactions
+      parameters:
+        - $ref: "#/components/parameters/TransactionTypeFilter"
+        - $ref: "#/components/parameters/CategoryIds"
+        - $ref: "#/components/parameters/AccountIds"
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/AmountFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - $ref: "#/components/parameters/MaxTime"
+        - $ref: "#/components/parameters/MinTime"
+      responses:
+        "200":
+          description: Transaction count
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionCountResponse"
+
+  /api/v1/transactions/list.json:
+    get:
+      tags: [Transactions]
+      summary: List transactions (paginated, cursor-based)
+      description: |
+        Returns transactions paginated by time sequence ID. Use `max_time` for cursor-based backward pagination.
+        Supports advanced filtering by type, categories, accounts, tags, amount range, and keyword search.
+      parameters:
+        - $ref: "#/components/parameters/TransactionTypeFilter"
+        - $ref: "#/components/parameters/CategoryIds"
+        - $ref: "#/components/parameters/AccountIds"
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/AmountFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - name: max_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Transaction time sequence ID (cursor for backward pagination)
+        - name: min_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: page
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - name: count
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 50
+          description: Number of items per page (max 50)
+        - name: with_count
+          in: query
+          schema:
+            type: boolean
+          description: Include total count
+        - name: with_pictures
+          in: query
+          schema:
+            type: boolean
+          description: Include picture info
+        - name: trim_account
+          in: query
+          schema:
+            type: boolean
+          description: Trim account info
+        - name: trim_category
+          in: query
+          schema:
+            type: boolean
+          description: Trim category info
+        - name: trim_tag
+          in: query
+          schema:
+            type: boolean
+          description: Trim tag info
+      responses:
+        "200":
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionInfoPageWrapperResponse"
+
+  /api/v1/transactions/list/by_month.json:
+    get:
+      tags: [Transactions]
+      summary: List transactions by month
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+        - $ref: "#/components/parameters/TransactionTypeFilter"
+        - $ref: "#/components/parameters/CategoryIds"
+        - $ref: "#/components/parameters/AccountIds"
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/AmountFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - name: with_pictures
+          in: query
+          schema:
+            type: boolean
+        - name: trim_account
+          in: query
+          schema:
+            type: boolean
+        - name: trim_category
+          in: query
+          schema:
+            type: boolean
+        - name: trim_tag
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Monthly transaction list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionInfoResponse"
+
+  /api/v1/transactions/list/all.json:
+    get:
+      tags: [Transactions]
+      summary: List all transactions (unpaginated, time range)
+      parameters:
+        - $ref: "#/components/parameters/TransactionTypeFilter"
+        - $ref: "#/components/parameters/CategoryIds"
+        - $ref: "#/components/parameters/AccountIds"
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/AmountFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - name: start_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Start time (Unix timestamp in seconds)
+        - name: end_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: End time (Unix timestamp in seconds)
+        - name: with_pictures
+          in: query
+          schema:
+            type: boolean
+        - name: trim_account
+          in: query
+          schema:
+            type: boolean
+        - name: trim_category
+          in: query
+          schema:
+            type: boolean
+        - name: trim_tag
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: All transactions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionInfoResponse"
+
+  /api/v1/transactions/reconciliation_statements.json:
+    get:
+      tags: [Transactions]
+      summary: Get reconciliation statement
+      parameters:
+        - name: account_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Account ID
+        - name: start_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: end_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Reconciliation statement
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionReconciliationStatementResponse"
+
+  /api/v1/transactions/statistics.json:
+    get:
+      tags: [Transactions]
+      summary: Get transaction statistics
+      parameters:
+        - name: start_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: end_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - name: use_transaction_timezone
+          in: query
+          schema:
+            type: boolean
+          description: Use transaction's own timezone for time calculations
+      responses:
+        "200":
+          description: Transaction statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionStatisticResponse"
+
+  /api/v1/transactions/statistics/trends.json:
+    get:
+      tags: [Transactions]
+      summary: Get transaction statistics trends
+      parameters:
+        - name: start_year_month
+          in: query
+          schema:
+            type: string
+          description: Start year-month (YYYYMM)
+        - name: end_year_month
+          in: query
+          schema:
+            type: string
+          description: End year-month (YYYYMM)
+        - $ref: "#/components/parameters/TagFilter"
+        - $ref: "#/components/parameters/Keyword"
+        - name: use_transaction_timezone
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Statistics trends
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionStatisticTrendsResponseItem"
+
+  /api/v1/transactions/statistics/asset_trends.json:
+    get:
+      tags: [Transactions]
+      summary: Get asset trends statistics
+      parameters:
+        - name: start_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: end_time
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Asset trends
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionStatisticAssetTrendsResponseItem"
+
+  /api/v1/transactions/amounts.json:
+    get:
+      tags: [Transactions]
+      summary: Get transaction amounts
+      description: |
+        Get aggregated income/expense amounts for custom time ranges.
+        Query format: `name_startTimestamp_endTimestamp` separated by `|` for multiple ranges.
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: Query items (e.g., `today_1680000000_1680086400|yesterday_1679913600_1680000000`)
+        - name: exclude_account_ids
+          in: query
+          schema:
+            type: string
+        - name: exclude_category_ids
+          in: query
+          schema:
+            type: string
+        - name: use_transaction_timezone
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Transaction amounts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionAmountsResponseItem"
+
+  /api/v1/transactions/get.json:
+    get:
+      tags: [Transactions]
+      summary: Get a single transaction
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Transaction ID
+        - name: with_pictures
+          in: query
+          schema:
+            type: boolean
+        - name: trim_account
+          in: query
+          schema:
+            type: boolean
+        - name: trim_category
+          in: query
+          schema:
+            type: boolean
+        - name: trim_tag
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Transaction details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionInfoResponse"
+
+  /api/v1/transactions/add.json:
+    post:
+      tags: [Transactions]
+      summary: Create a new transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCreateRequest"
+      responses:
+        "200":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionInfoResponse"
+
+  /api/v1/transactions/modify.json:
+    post:
+      tags: [Transactions]
+      summary: Modify a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionModifyRequest"
+      responses:
+        "200":
+          description: Transaction modified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionInfoResponse"
+
+  /api/v1/transactions/batch_update/category.json:
+    post:
+      tags: [Transactions]
+      summary: Batch update category for transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionBatchUpdateCategoryRequest"
+      responses:
+        "200":
+          description: Categories updated
+
+  /api/v1/transactions/batch_update/account.json:
+    post:
+      tags: [Transactions]
+      summary: Batch update account for transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionBatchUpdateAccountRequest"
+      responses:
+        "200":
+          description: Accounts updated
+
+  /api/v1/transactions/batch_update/tag/add.json:
+    post:
+      tags: [Transactions]
+      summary: Batch add tags to transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionBatchAddTagsRequest"
+      responses:
+        "200":
+          description: Tags added
+
+  /api/v1/transactions/batch_update/tag/remove.json:
+    post:
+      tags: [Transactions]
+      summary: Batch remove tags from transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionBatchRemoveTagsRequest"
+      responses:
+        "200":
+          description: Tags removed
+
+  /api/v1/transactions/batch_update/tag/clear.json:
+    post:
+      tags: [Transactions]
+      summary: Batch clear all tags from transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionBatchClearTagsRequest"
+      responses:
+        "200":
+          description: Tags cleared
+
+  /api/v1/transactions/move/all.json:
+    post:
+      tags: [Transactions]
+      summary: Move all transactions between accounts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionMoveBetweenAccountsRequest"
+      responses:
+        "200":
+          description: Transactions moved
+
+  /api/v1/transactions/delete.json:
+    post:
+      tags: [Transactions]
+      summary: Delete a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionDeleteRequest"
+      responses:
+        "200":
+          description: Transaction deleted
+
+  /api/v1/transactions/batch_delete.json:
+    post:
+      tags: [Transactions]
+      summary: Batch delete transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionBatchDeleteRequest"
+      responses:
+        "200":
+          description: Transactions deleted
+
+  /api/v1/transactions/parse_custom_file.json:
+    post:
+      tags: [Transactions]
+      summary: Parse custom import file data
+      description: Parse transaction data from custom file formats for preview before import.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Parsed import data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/ImportTransactionResponsePageWrapper"
+
+  /api/v1/transactions/parse_import.json:
+    post:
+      tags: [Transactions]
+      summary: Parse import file (standard formats)
+      description: Parse transaction data from standard import formats (CSV, OFX, QFX, QIF, etc.).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Parsed import data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/ImportTransactionResponsePageWrapper"
+
+  /api/v1/transactions/import.json:
+    post:
+      tags: [Transactions]
+      summary: Import transactions
+      description: Actually import the parsed transactions into the database. Supports async processing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionImportRequest"
+      responses:
+        "200":
+          description: Import initiated
+
+  /api/v1/transactions/import/process.json:
+    get:
+      tags: [Transactions]
+      summary: Check import process status
+      description: Check the progress of an async import job.
+      parameters:
+        - name: client_session_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Import process status
+
+  # ====================================================================
+  #  Transaction Pictures
+  # ====================================================================
+  /api/v1/transaction/pictures/upload.json:
+    post:
+      tags: [Transaction Pictures]
+      summary: Upload a transaction picture
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                picture:
+                  type: string
+                  format: binary
+                  description: Image file
+      responses:
+        "200":
+          description: Picture uploaded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionPictureInfoBasicResponse"
+
+  /api/v1/transaction/pictures/remove_unused.json:
+    post:
+      tags: [Transaction Pictures]
+      summary: Remove unused pictures
+      description: Removes a specific unused picture that isn't attached to any transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Picture ID
+              required: [id]
+      responses:
+        "200":
+          description: Picture removed
+
+  # ====================================================================
+  #  Transaction Categories
+  # ====================================================================
+  /api/v1/transaction/categories/list.json:
+    get:
+      tags: [Transaction Categories]
+      summary: List transaction categories
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+          description: Category type (0=all, 1=income, 2=expense, 3=transfer)
+        - name: parent_id
+          in: query
+          schema:
+            type: string
+            default: "-1"
+          description: Parent category ID (-1 for all)
+      responses:
+        "200":
+          description: Category list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionCategoryInfoResponse"
+
+  /api/v1/transaction/categories/get.json:
+    get:
+      tags: [Transaction Categories]
+      summary: Get a single category
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Category ID
+      responses:
+        "200":
+          description: Category details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionCategoryInfoResponse"
+
+  /api/v1/transaction/categories/add.json:
+    post:
+      tags: [Transaction Categories]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCategoryCreateRequest"
+      responses:
+        "200":
+          description: Category created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionCategoryInfoResponse"
+
+  /api/v1/transaction/categories/add_batch.json:
+    post:
+      tags: [Transaction Categories]
+      summary: Create categories in batch
+      description: Create multiple categories at once, including nested sub-categories.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCategoryCreateBatchRequest"
+      responses:
+        "200":
+          description: Categories created
+
+  /api/v1/transaction/categories/modify.json:
+    post:
+      tags: [Transaction Categories]
+      summary: Modify a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCategoryModifyRequest"
+      responses:
+        "200":
+          description: Category modified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionCategoryInfoResponse"
+
+  /api/v1/transaction/categories/hide.json:
+    post:
+      tags: [Transaction Categories]
+      summary: Hide/unhide a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCategoryHideRequest"
+      responses:
+        "200":
+          description: Category hidden/unhidden
+
+  /api/v1/transaction/categories/move.json:
+    post:
+      tags: [Transaction Categories]
+      summary: Reorder categories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCategoryMoveRequest"
+      responses:
+        "200":
+          description: Categories reordered
+
+  /api/v1/transaction/categories/delete.json:
+    post:
+      tags: [Transaction Categories]
+      summary: Delete a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionCategoryDeleteRequest"
+      responses:
+        "200":
+          description: Category deleted
+
+  # ====================================================================
+  #  Transaction Tag Groups
+  # ====================================================================
+  /api/v1/transaction/tags/groups/list.json:
+    get:
+      tags: [Transaction Tag Groups]
+      summary: List tag groups
+      responses:
+        "200":
+          description: Tag group list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionTagGroupInfoResponse"
+
+  /api/v1/transaction/tags/groups/get.json:
+    get:
+      tags: [Transaction Tag Groups]
+      summary: Get a single tag group
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Tag group ID
+      responses:
+        "200":
+          description: Tag group details
+
+  /api/v1/transaction/tags/groups/add.json:
+    post:
+      tags: [Transaction Tag Groups]
+      summary: Create a tag group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagGroupCreateRequest"
+      responses:
+        "200":
+          description: Tag group created
+
+  /api/v1/transaction/tags/groups/modify.json:
+    post:
+      tags: [Transaction Tag Groups]
+      summary: Modify a tag group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagGroupModifyRequest"
+      responses:
+        "200":
+          description: Tag group modified
+
+  /api/v1/transaction/tags/groups/move.json:
+    post:
+      tags: [Transaction Tag Groups]
+      summary: Reorder tag groups
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagGroupMoveRequest"
+      responses:
+        "200":
+          description: Tag groups reordered
+
+  /api/v1/transaction/tags/groups/delete.json:
+    post:
+      tags: [Transaction Tag Groups]
+      summary: Delete a tag group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagGroupDeleteRequest"
+      responses:
+        "200":
+          description: Tag group deleted
+
+  # ====================================================================
+  #  Transaction Tags
+  # ====================================================================
+  /api/v1/transaction/tags/list.json:
+    get:
+      tags: [Transaction Tags]
+      summary: List all tags
+      responses:
+        "200":
+          description: Tag list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionTagInfoResponse"
+
+  /api/v1/transaction/tags/get.json:
+    get:
+      tags: [Transaction Tags]
+      summary: Get a single tag
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Tag ID
+      responses:
+        "200":
+          description: Tag details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionTagInfoResponse"
+
+  /api/v1/transaction/tags/add.json:
+    post:
+      tags: [Transaction Tags]
+      summary: Create a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagCreateRequest"
+      responses:
+        "200":
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionTagInfoResponse"
+
+  /api/v1/transaction/tags/add_batch.json:
+    post:
+      tags: [Transaction Tags]
+      summary: Create tags in batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagCreateBatchRequest"
+      responses:
+        "200":
+          description: Tags created
+
+  /api/v1/transaction/tags/modify.json:
+    post:
+      tags: [Transaction Tags]
+      summary: Modify a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagModifyRequest"
+      responses:
+        "200":
+          description: Tag modified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionTagInfoResponse"
+
+  /api/v1/transaction/tags/hide.json:
+    post:
+      tags: [Transaction Tags]
+      summary: Hide/unhide a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagHideRequest"
+      responses:
+        "200":
+          description: Tag hidden/unhidden
+
+  /api/v1/transaction/tags/move.json:
+    post:
+      tags: [Transaction Tags]
+      summary: Reorder tags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagMoveRequest"
+      responses:
+        "200":
+          description: Tags reordered
+
+  /api/v1/transaction/tags/delete.json:
+    post:
+      tags: [Transaction Tags]
+      summary: Delete a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTagDeleteRequest"
+      responses:
+        "200":
+          description: Tag deleted
+
+  # ====================================================================
+  #  Transaction Templates
+  # ====================================================================
+  /api/v1/transaction/templates/list.json:
+    get:
+      tags: [Transaction Templates]
+      summary: List transaction templates
+      parameters:
+        - name: templateType
+          in: query
+          schema:
+            type: integer
+          description: Template type (1=normal, 2=scheduled)
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TransactionTemplateInfoResponse"
+
+  /api/v1/transaction/templates/get.json:
+    get:
+      tags: [Transaction Templates]
+      summary: Get a single template
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionTemplateInfoResponse"
+
+  /api/v1/transaction/templates/add.json:
+    post:
+      tags: [Transaction Templates]
+      summary: Create a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTemplateCreateRequest"
+      responses:
+        "200":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionTemplateInfoResponse"
+
+  /api/v1/transaction/templates/modify.json:
+    post:
+      tags: [Transaction Templates]
+      summary: Modify a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTemplateModifyRequest"
+      responses:
+        "200":
+          description: Template modified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/TransactionTemplateInfoResponse"
+
+  /api/v1/transaction/templates/hide.json:
+    post:
+      tags: [Transaction Templates]
+      summary: Hide/unhide a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTemplateHideRequest"
+      responses:
+        "200":
+          description: Template hidden/unhidden
+
+  /api/v1/transaction/templates/move.json:
+    post:
+      tags: [Transaction Templates]
+      summary: Reorder templates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTemplateMoveRequest"
+      responses:
+        "200":
+          description: Templates reordered
+
+  /api/v1/transaction/templates/delete.json:
+    post:
+      tags: [Transaction Templates]
+      summary: Delete a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionTemplateDeleteRequest"
+      responses:
+        "200":
+          description: Template deleted
+
+  # ====================================================================
+  #  Insights Explorers
+  # ====================================================================
+  /api/v1/insights/explorers/list.json:
+    get:
+      tags: [Insights Explorers]
+      summary: List insights explorers
+      responses:
+        "200":
+          description: Explorer list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/InsightsExplorerInfoResponse"
+
+  /api/v1/insights/explorers/get.json:
+    get:
+      tags: [Insights Explorers]
+      summary: Get a single explorer
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Explorer details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/InsightsExplorerInfoResponse"
+
+  /api/v1/insights/explorers/add.json:
+    post:
+      tags: [Insights Explorers]
+      summary: Create an explorer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightsExplorerCreateRequest"
+      responses:
+        "200":
+          description: Explorer created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/InsightsExplorerInfoResponse"
+
+  /api/v1/insights/explorers/modify.json:
+    post:
+      tags: [Insights Explorers]
+      summary: Modify an explorer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightsExplorerModifyRequest"
+      responses:
+        "200":
+          description: Explorer modified
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/InsightsExplorerInfoResponse"
+
+  /api/v1/insights/explorers/hide.json:
+    post:
+      tags: [Insights Explorers]
+      summary: Hide/unhide an explorer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightsExplorerHideRequest"
+      responses:
+        "200":
+          description: Explorer hidden/unhidden
+
+  /api/v1/insights/explorers/move.json:
+    post:
+      tags: [Insights Explorers]
+      summary: Reorder explorers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightsExplorerMoveRequest"
+      responses:
+        "200":
+          description: Explorers reordered
+
+  /api/v1/insights/explorers/delete.json:
+    post:
+      tags: [Insights Explorers]
+      summary: Delete an explorer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsightsExplorerDeleteRequest"
+      responses:
+        "200":
+          description: Explorer deleted
+
+  # ====================================================================
+  #  LLM / AI
+  # ====================================================================
+  /api/v1/llm/transactions/recognize_receipt_image.json:
+    post:
+      tags: [LLM]
+      summary: Recognize receipt image via AI
+      description: Upload a receipt image and get recognized transaction data via AI (LLM).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Receipt image file
+      responses:
+        "200":
+          description: Recognized receipt data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/RecognizedReceiptImageResponse"
+
+  # ====================================================================
+  #  Exchange Rates
+  # ====================================================================
+  /api/v1/exchange_rates/latest.json:
+    get:
+      tags: [Exchange Rates]
+      summary: Get latest exchange rates
+      responses:
+        "200":
+          description: Latest exchange rates
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/LatestExchangeRateResponse"
+
+  /api/v1/exchange_rates/user_custom/update.json:
+    post:
+      tags: [Exchange Rates]
+      summary: Update user custom exchange rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCustomExchangeRateUpdateRequest"
+      responses:
+        "200":
+          description: Custom rate updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      result:
+                        $ref: "#/components/schemas/UserCustomExchangeRateUpdateResponse"
+
+  /api/v1/exchange_rates/user_custom/delete.json:
+    post:
+      tags: [Exchange Rates]
+      summary: Delete user custom exchange rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCustomExchangeRateDeleteRequest"
+      responses:
+        "200":
+          description: Custom rate deleted
+
+  # ====================================================================
+  #  MCP (Model Context Protocol) - JSON-RPC 2.0 endpoint
+  # ====================================================================
+  /mcp:
+    post:
+      tags: [MCP]
+      summary: MCP JSON-RPC endpoint
+      description: |
+        Model Context Protocol server endpoint using JSON-RPC 2.0.
+        Requires MCP token in `Authorization: Bearer <mcp_token>` header.
+
+        Supported methods:
+        - `initialize` — Initialize MCP session
+        - `resources/list` — List available resources
+        - `resources/read` — Read a specific resource
+        - `tools/list` — List available tools
+        - `tools/call` — Call a tool
+        - `ping` — Health ping
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JSONRPCRequest"
+      responses:
+        "200":
+          description: JSON-RPC response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JSONRPCResponse"
+        "202":
+          description: Notification received (no response expected)
+
+# ====================================================================
+#  Components
+# ====================================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from `/api/authorize.json` login or `/api/v1/tokens/refresh.json`.
+        Also supports API and MCP tokens generated via `/api/v1/tokens/generate/api.json` or `/api/v1/tokens/generate/mcp.json`.
+
+  parameters:
+    TransactionTypeFilter:
+      name: type
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 4
+      description: Transaction type filter (0=all, 1=modify balance, 2=income, 3=expense, 4=transfer)
+    CategoryIds:
+      name: category_ids
+      in: query
+      schema:
+        type: string
+      description: Comma-separated category IDs
+    AccountIds:
+      name: account_ids
+      in: query
+      schema:
+        type: string
+      description: Comma-separated account IDs
+    TagFilter:
+      name: tag_filter
+      in: query
+      schema:
+        type: string
+      description: Tag filter expression (e.g., `0:1,2;1:3` for "has any of [1,2]" + "has all of [3]", or `none` for "no tag")
+    AmountFilter:
+      name: amount_filter
+      in: query
+      schema:
+        type: string
+      description: Amount filter expression
+    Keyword:
+      name: keyword
+      in: query
+      schema:
+        type: string
+      description: Search keyword for comments
+    MaxTime:
+      name: max_time
+      in: query
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+      description: Maximum transaction time (Unix timestamp in seconds)
+    MinTime:
+      name: min_time
+      in: query
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+      description: Minimum transaction time (Unix timestamp in seconds)
+
+  schemas:
+    # ==== Generic ====
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        result:
+          description: Response data (varies by endpoint)
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        errorCode:
+          type: integer
+          format: int32
+          description: Error code (see error code format in API description)
+        errorMessage:
+          type: string
+          description: Human-readable error message
+        path:
+          type: string
+          description: Request path
+        context:
+          description: Optional context data for the error
+
+    # ==== Auth ====
+    UserLoginRequest:
+      type: object
+      required: [loginName, password]
+      properties:
+        loginName:
+          type: string
+          maxLength: 100
+          description: Username or email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token
+        need2FA:
+          type: boolean
+          description: Whether 2FA is required to complete login
+        user:
+          $ref: "#/components/schemas/UserBasicInfo"
+        applicationCloudSettings:
+          $ref: "#/components/schemas/ApplicationCloudSettingSlice"
+        notificationContent:
+          type: string
+
+    UserRegisterRequest:
+      type: object
+      required: [username, email, nickname, password, language, defaultCurrency]
+      properties:
+        username:
+          type: string
+          maxLength: 32
+        email:
+          type: string
+          format: email
+          maxLength: 100
+        nickname:
+          type: string
+          maxLength: 64
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+        language:
+          type: string
+          minLength: 2
+          maxLength: 16
+        defaultCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        firstDayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: First day of week (0=Sunday, 1=Monday, etc.)
+        categories:
+          type: array
+          description: Preset categories to create with registration
+          items:
+            $ref: "#/components/schemas/TransactionCategoryCreateWithSubCategories"
+
+    RegisterResponse:
+      allOf:
+        - $ref: "#/components/schemas/AuthResponse"
+        - type: object
+          properties:
+            needVerifyEmail:
+              type: boolean
+            presetCategoriesSaved:
+              type: boolean
+
+    # ==== Users ====
+    UserBasicInfo:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        nickname:
+          type: string
+        avatar:
+          type: string
+          description: Avatar URL
+        avatarProvider:
+          type: string
+        defaultAccountId:
+          type: string
+        transactionEditScope:
+          type: integer
+          description: Scope in which transactions can be edited (0=none, 1=all, 2=today+, 3=last24h+, 4=this week+, 5=this month+, 6=this year+)
+        language:
+          type: string
+        defaultCurrency:
+          type: string
+        firstDayOfWeek:
+          type: integer
+        fiscalYearStart:
+          type: integer
+        calendarDisplayType:
+          type: integer
+        dateDisplayType:
+          type: integer
+        longDateFormat:
+          type: integer
+        shortDateFormat:
+          type: integer
+        longTimeFormat:
+          type: integer
+        shortTimeFormat:
+          type: integer
+        fiscalYearFormat:
+          type: integer
+        currencyDisplayType:
+          type: integer
+        numeralSystem:
+          type: integer
+        decimalSeparator:
+          type: integer
+        digitGroupingSymbol:
+          type: integer
+        digitGrouping:
+          type: integer
+        coordinateDisplayType:
+          type: integer
+        expenseAmountColor:
+          type: integer
+        incomeAmountColor:
+          type: integer
+        emailVerified:
+          type: boolean
+
+    UserProfileResponse:
+      allOf:
+        - $ref: "#/components/schemas/UserBasicInfo"
+        - type: object
+          properties:
+            noPassword:
+              type: boolean
+            lastLoginAt:
+              type: integer
+              format: int64
+
+    UserProfileUpdateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 100
+        nickname:
+          type: string
+          maxLength: 64
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+          description: New password (requires oldPassword)
+        oldPassword:
+          type: string
+          minLength: 6
+          maxLength: 128
+        defaultAccountId:
+          type: string
+        transactionEditScope:
+          type: integer
+          minimum: 0
+          maximum: 6
+        language:
+          type: string
+          minLength: 2
+          maxLength: 16
+        defaultCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        firstDayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        fiscalYearStart:
+          type: integer
+        calendarDisplayType:
+          type: integer
+          minimum: 0
+          maximum: 4
+        dateDisplayType:
+          type: integer
+          minimum: 0
+          maximum: 3
+        longDateFormat:
+          type: integer
+          minimum: 0
+          maximum: 3
+        shortDateFormat:
+          type: integer
+          minimum: 0
+          maximum: 3
+        longTimeFormat:
+          type: integer
+          minimum: 0
+          maximum: 3
+        shortTimeFormat:
+          type: integer
+          minimum: 0
+          maximum: 3
+        fiscalYearFormat:
+          type: integer
+          minimum: 0
+          maximum: 5
+        currencyDisplayType:
+          type: integer
+          minimum: 0
+          maximum: 11
+        numeralSystem:
+          type: integer
+          minimum: 0
+          maximum: 5
+        decimalSeparator:
+          type: integer
+          minimum: 0
+          maximum: 3
+        digitGroupingSymbol:
+          type: integer
+          minimum: 0
+          maximum: 4
+        digitGrouping:
+          type: integer
+          minimum: 0
+          maximum: 3
+        coordinateDisplayType:
+          type: integer
+          minimum: 0
+          maximum: 6
+        expenseAmountColor:
+          type: integer
+          minimum: 0
+          maximum: 4
+        incomeAmountColor:
+          type: integer
+          minimum: 0
+          maximum: 4
+
+    UserProfileUpdateResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserBasicInfo"
+        newToken:
+          type: string
+
+    # ==== Email Verification ====
+    UserVerifyEmailRequest:
+      type: object
+      properties:
+        requestNewToken:
+          type: boolean
+
+    UserVerifyEmailResponse:
+      type: object
+      properties:
+        newToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserBasicInfo"
+        notificationContent:
+          type: string
+
+    UserResendVerifyEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 100
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    # ==== Password Reset ====
+    ForgetPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 100
+
+    PasswordResetRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 100
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    # ==== 2FA ====
+    TwoFactorLoginRequest:
+      type: object
+      required: [passcode]
+      properties:
+        passcode:
+          type: string
+          minLength: 6
+          maxLength: 6
+          description: TOTP passcode
+
+    TwoFactorRecoveryCodeLoginRequest:
+      type: object
+      required: [recoveryCode]
+      properties:
+        recoveryCode:
+          type: string
+          minLength: 11
+          maxLength: 11
+
+    TwoFactorEnableConfirmRequest:
+      type: object
+      required: [secret, passcode]
+      properties:
+        secret:
+          type: string
+          minLength: 32
+          maxLength: 32
+          description: TOTP secret
+        passcode:
+          type: string
+          minLength: 6
+          maxLength: 6
+
+    TwoFactorEnableResponse:
+      type: object
+      properties:
+        secret:
+          type: string
+          description: TOTP secret
+        qrcode:
+          type: string
+          description: QR code data URI for setup
+
+    TwoFactorEnableConfirmResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        recoveryCodes:
+          type: array
+          items:
+            type: string
+
+    TwoFactorDisableRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    TwoFactorRegenerateRecoveryCodeRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    TwoFactorStatusResponse:
+      type: object
+      properties:
+        enable:
+          type: boolean
+        createdAt:
+          type: integer
+          format: int64
+
+    # ==== OAuth2 ====
+    OAuth2CallbackLoginRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+        passcode:
+          type: string
+          minLength: 6
+          maxLength: 6
+        token:
+          type: string
+
+    # ==== External Auth ====
+    UserExternalAuthUnlinkRequest:
+      type: object
+      required: [externalAuthType, password]
+      properties:
+        externalAuthType:
+          type: string
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    UserExternalAuthInfoResponse:
+      type: object
+      properties:
+        externalAuthCategory:
+          type: string
+        externalAuthType:
+          type: string
+        linked:
+          type: boolean
+        externalUsername:
+          type: string
+        createdAt:
+          type: integer
+          format: int64
+
+    UserExternalAuthInfoResponsesSlice:
+      type: array
+      items:
+        $ref: "#/components/schemas/UserExternalAuthInfoResponse"
+
+    # ==== Tokens ====
+    TokenGenerateAPIRequest:
+      type: object
+      properties:
+        expiresInSeconds:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    TokenGenerateMCPRequest:
+      type: object
+      properties:
+        expiresInSeconds:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    TokenRevokeRequest:
+      type: object
+      required: [tokenId]
+      properties:
+        tokenId:
+          type: string
+
+    TokenGenerateAPIResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        apiBaseUrl:
+          type: string
+
+    TokenGenerateMCPResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        mcpUrl:
+          type: string
+
+    TokenRefreshResponse:
+      type: object
+      properties:
+        newToken:
+          type: string
+        oldTokenId:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserBasicInfo"
+        applicationCloudSettings:
+          $ref: "#/components/schemas/ApplicationCloudSettingSlice"
+        notificationContent:
+          type: string
+
+    TokenInfoResponse:
+      type: object
+      properties:
+        tokenId:
+          type: string
+        tokenType:
+          type: integer
+          description: Token type (1=normal, 5=MCP, 8=API)
+        userAgent:
+          type: string
+        lastSeen:
+          type: integer
+          format: int64
+        isCurrent:
+          type: boolean
+
+    TokenInfoResponseSlice:
+      type: array
+      items:
+        $ref: "#/components/schemas/TokenInfoResponse"
+
+    # ==== Data Management ====
+    ClearDataRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    ClearAccountTransactionsRequest:
+      type: object
+      required: [accountId]
+      properties:
+        accountId:
+          type: string
+          description: Account ID
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    DataStatisticsResponse:
+      type: object
+      properties:
+        totalAccountCount:
+          type: string
+        totalTransactionCategoryCount:
+          type: string
+        totalTransactionTagCount:
+          type: string
+        totalTransactionCount:
+          type: string
+        totalTransactionPictureCount:
+          type: string
+        totalInsightsExplorerCount:
+          type: string
+        totalTransactionTemplateCount:
+          type: string
+        totalScheduledTransactionCount:
+          type: string
+
+    # ==== Accounts ====
+    AccountCreateRequest:
+      type: object
+      required: [name, category, type, icon, color, currency]
+      properties:
+        name:
+          type: string
+          maxLength: 64
+        category:
+          type: integer
+          description: Account category (1-9)
+        type:
+          type: integer
+          description: 1=single, 2=multi-sub-accounts
+        icon:
+          type: string
+          description: Icon ID
+        color:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9a-fA-F]{6}$"
+          description: Hex RGB color
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        balance:
+          type: integer
+          format: int64
+        balanceTime:
+          type: integer
+          format: int64
+        comment:
+          type: string
+          maxLength: 255
+        creditCardStatementDate:
+          type: integer
+          minimum: 0
+          maximum: 28
+        subAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountCreateRequest"
+        clientSessionId:
+          type: string
+
+    AccountModifyRequest:
+      type: object
+      required: [id, name, category, color]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+        category:
+          type: integer
+        icon:
+          type: string
+        color:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9a-fA-F]{6}$"
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        balance:
+          type: integer
+          format: int64
+        balanceTime:
+          type: integer
+          format: int64
+        comment:
+          type: string
+          maxLength: 255
+        creditCardStatementDate:
+          type: integer
+          minimum: 0
+          maximum: 28
+        hidden:
+          type: boolean
+        subAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountModifyRequest"
+        clientSessionId:
+          type: string
+
+    AccountHideRequest:
+      type: object
+      required: [id, hidden]
+      properties:
+        id:
+          type: string
+        hidden:
+          type: boolean
+
+    AccountMoveRequest:
+      type: object
+      required: [newDisplayOrders]
+      properties:
+        newDisplayOrders:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/AccountNewDisplayOrderRequest"
+
+    AccountNewDisplayOrderRequest:
+      type: object
+      required: [id, displayOrder]
+      properties:
+        id:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    AccountDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    AccountInfoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parentId:
+          type: string
+        category:
+          type: integer
+        type:
+          type: integer
+        icon:
+          type: string
+        color:
+          type: string
+        currency:
+          type: string
+        balance:
+          type: integer
+          format: int64
+        comment:
+          type: string
+        creditCardStatementDate:
+          type: integer
+        displayOrder:
+          type: integer
+          format: int32
+        isAsset:
+          type: boolean
+        isLiability:
+          type: boolean
+        hidden:
+          type: boolean
+        subAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountInfoResponse"
+
+    # ==== Transactions ====
+    TransactionGeoLocationRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+
+    TransactionGeoLocationResponse:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+
+    TransactionCreateRequest:
+      type: object
+      required: [type, time, sourceAccountId]
+      properties:
+        type:
+          type: integer
+          description: 1=modify balance, 2=income, 3=expense, 4=transfer
+        categoryId:
+          type: string
+          description: Category ID (required for income/expense)
+        time:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Transaction time (Unix timestamp in seconds)
+        utcOffset:
+          type: integer
+          minimum: -720
+          maximum: 840
+          description: UTC offset in minutes
+        sourceAccountId:
+          type: string
+          description: Source account ID
+        destinationAccountId:
+          type: string
+          description: Destination account ID (required for transfer)
+        sourceAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        destinationAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        hideAmount:
+          type: boolean
+        tagIds:
+          type: array
+          items:
+            type: string
+        pictureIds:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+          maxLength: 255
+        geoLocation:
+          $ref: "#/components/schemas/TransactionGeoLocationRequest"
+        clientSessionId:
+          type: string
+
+    TransactionModifyRequest:
+      type: object
+      required: [id, time, sourceAccountId]
+      properties:
+        id:
+          type: string
+        categoryId:
+          type: string
+        time:
+          type: integer
+          format: int64
+          minimum: 1
+        utcOffset:
+          type: integer
+          minimum: -720
+          maximum: 840
+        sourceAccountId:
+          type: string
+        destinationAccountId:
+          type: string
+        sourceAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        destinationAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        hideAmount:
+          type: boolean
+        tagIds:
+          type: array
+          items:
+            type: string
+        pictureIds:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+          maxLength: 255
+        geoLocation:
+          $ref: "#/components/schemas/TransactionGeoLocationRequest"
+
+    TransactionImportRequest:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionCreateRequest"
+        clientSessionId:
+          type: string
+
+    TransactionBatchUpdateCategoryRequest:
+      type: object
+      required: [transactionIds, categoryId]
+      properties:
+        transactionIds:
+          type: array
+          items:
+            type: string
+        categoryId:
+          type: string
+
+    TransactionBatchUpdateAccountRequest:
+      type: object
+      required: [transactionIds, accountId]
+      properties:
+        transactionIds:
+          type: array
+          items:
+            type: string
+        accountId:
+          type: string
+        isDestinationAccount:
+          type: boolean
+          description: If true, update destination account instead of source
+
+    TransactionBatchAddTagsRequest:
+      type: object
+      required: [transactionIds, tagIds]
+      properties:
+        transactionIds:
+          type: array
+          items:
+            type: string
+        tagIds:
+          type: array
+          items:
+            type: string
+
+    TransactionBatchRemoveTagsRequest:
+      type: object
+      required: [transactionIds, tagIds]
+      properties:
+        transactionIds:
+          type: array
+          items:
+            type: string
+        tagIds:
+          type: array
+          items:
+            type: string
+
+    TransactionBatchClearTagsRequest:
+      type: object
+      required: [transactionIds]
+      properties:
+        transactionIds:
+          type: array
+          items:
+            type: string
+
+    TransactionMoveBetweenAccountsRequest:
+      type: object
+      required: [fromAccountId, toAccountId]
+      properties:
+        fromAccountId:
+          type: string
+        toAccountId:
+          type: string
+
+    TransactionDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    TransactionBatchDeleteRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+        password:
+          type: string
+          minLength: 6
+          maxLength: 128
+
+    TransactionInfoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        timeSequenceId:
+          type: string
+        type:
+          type: integer
+          description: 1=modify balance, 2=income, 3=expense, 4=transfer
+        categoryId:
+          type: string
+        category:
+          $ref: "#/components/schemas/TransactionCategoryInfoResponse"
+        time:
+          type: integer
+          format: int64
+          description: Unix timestamp in seconds
+        utcOffset:
+          type: integer
+          description: UTC offset in minutes
+        sourceAccountId:
+          type: string
+        sourceAccount:
+          $ref: "#/components/schemas/AccountInfoResponse"
+        destinationAccountId:
+          type: string
+        destinationAccount:
+          $ref: "#/components/schemas/AccountInfoResponse"
+        sourceAmount:
+          type: integer
+          format: int64
+        destinationAmount:
+          type: integer
+          format: int64
+        hideAmount:
+          type: boolean
+        tagIds:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionTagInfoResponse"
+        pictures:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionPictureInfoBasicResponse"
+        comment:
+          type: string
+        geoLocation:
+          $ref: "#/components/schemas/TransactionGeoLocationResponse"
+        editable:
+          type: boolean
+
+    TransactionCountResponse:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          format: int64
+
+    TransactionInfoPageWrapperResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionInfoResponse"
+        nextTimeSequenceId:
+          type: string
+          description: Cursor for next page (null if no more)
+        totalCount:
+          type: integer
+          format: int64
+          description: Optional total count
+
+    TransactionReconciliationStatementResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            type: object
+            allOf:
+              - $ref: "#/components/schemas/TransactionInfoResponse"
+              - type: object
+                properties:
+                  accountOpeningBalance:
+                    type: integer
+                    format: int64
+                  accountClosingBalance:
+                    type: integer
+                    format: int64
+        totalInflows:
+          type: integer
+          format: int64
+        totalOutflows:
+          type: integer
+          format: int64
+        openingBalance:
+          type: integer
+          format: int64
+        closingBalance:
+          type: integer
+          format: int64
+
+    TransactionStatisticResponse:
+      type: object
+      properties:
+        startTime:
+          type: integer
+          format: int64
+        endTime:
+          type: integer
+          format: int64
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionStatisticResponseItem"
+
+    TransactionStatisticResponseItem:
+      type: object
+      properties:
+        categoryId:
+          type: string
+        accountId:
+          type: string
+        relatedAccountId:
+          type: string
+        relatedAccountType:
+          type: integer
+          description: 1=transfer from, 2=transfer to
+        amount:
+          type: integer
+          format: int64
+
+    TransactionStatisticTrendsResponseItem:
+      type: object
+      properties:
+        year:
+          type: integer
+          format: int32
+        month:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionStatisticResponseItem"
+
+    TransactionStatisticAssetTrendsResponseItem:
+      type: object
+      properties:
+        year:
+          type: integer
+          format: int32
+        month:
+          type: integer
+          format: int32
+        day:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              accountId:
+                type: string
+              accountOpeningBalance:
+                type: integer
+                format: int64
+              accountClosingBalance:
+                type: integer
+                format: int64
+
+    TransactionAmountsResponseItem:
+      type: object
+      properties:
+        startTime:
+          type: integer
+          format: int64
+        endTime:
+          type: integer
+          format: int64
+        amounts:
+          type: array
+          items:
+            type: object
+            properties:
+              currency:
+                type: string
+              incomeAmount:
+                type: integer
+                format: int64
+              expenseAmount:
+                type: integer
+                format: int64
+
+    # ==== Transaction Pictures ====
+    TransactionPictureInfoBasicResponse:
+      type: object
+      properties:
+        pictureId:
+          type: string
+        originalUrl:
+          type: string
+
+    # ==== Transaction Categories ====
+    TransactionCategoryCreateRequest:
+      type: object
+      required: [name, type, color]
+      properties:
+        name:
+          type: string
+          maxLength: 64
+        type:
+          type: integer
+          description: 1=income, 2=expense, 3=transfer
+        parentId:
+          type: string
+          description: Parent category ID (0 for top-level)
+        icon:
+          type: string
+        color:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9a-fA-F]{6}$"
+        comment:
+          type: string
+          maxLength: 255
+        clientSessionId:
+          type: string
+
+    TransactionCategoryCreateBatchRequest:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionCategoryCreateWithSubCategories"
+
+    TransactionCategoryCreateWithSubCategories:
+      type: object
+      required: [name, type, color, subCategories]
+      properties:
+        name:
+          type: string
+          maxLength: 64
+        type:
+          type: integer
+        icon:
+          type: string
+        color:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9a-fA-F]{6}$"
+        comment:
+          type: string
+          maxLength: 255
+        subCategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionCategoryCreateRequest"
+
+    TransactionCategoryModifyRequest:
+      type: object
+      required: [id, name, color]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+        parentId:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+          minLength: 6
+          maxLength: 6
+          pattern: "^[0-9a-fA-F]{6}$"
+        comment:
+          type: string
+          maxLength: 255
+        hidden:
+          type: boolean
+
+    TransactionCategoryHideRequest:
+      type: object
+      required: [id, hidden]
+      properties:
+        id:
+          type: string
+        hidden:
+          type: boolean
+
+    TransactionCategoryMoveRequest:
+      type: object
+      required: [newDisplayOrders]
+      properties:
+        newDisplayOrders:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/TransactionCategoryNewDisplayOrderRequest"
+
+    TransactionCategoryNewDisplayOrderRequest:
+      type: object
+      required: [id, displayOrder]
+      properties:
+        id:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    TransactionCategoryDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    TransactionCategoryInfoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parentId:
+          type: string
+        type:
+          type: integer
+          description: 1=income, 2=expense, 3=transfer
+        icon:
+          type: string
+        color:
+          type: string
+        comment:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+        hidden:
+          type: boolean
+        subCategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionCategoryInfoResponse"
+
+    # ==== Transaction Tags ====
+    TransactionTagCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        groupId:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+
+    TransactionTagCreateBatchRequest:
+      type: object
+      required: [tags]
+      properties:
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionTagCreateRequest"
+        groupId:
+          type: string
+        skipExists:
+          type: boolean
+
+    TransactionTagModifyRequest:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        groupId:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+
+    TransactionTagHideRequest:
+      type: object
+      required: [id, hidden]
+      properties:
+        id:
+          type: string
+        hidden:
+          type: boolean
+
+    TransactionTagMoveRequest:
+      type: object
+      required: [newDisplayOrders]
+      properties:
+        newDisplayOrders:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/TransactionTagNewDisplayOrderRequest"
+
+    TransactionTagNewDisplayOrderRequest:
+      type: object
+      required: [id, displayOrder]
+      properties:
+        id:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    TransactionTagDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    TransactionTagInfoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        groupId:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+        hidden:
+          type: boolean
+
+    # ==== Transaction Tag Groups ====
+    TransactionTagGroupCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 64
+
+    TransactionTagGroupModifyRequest:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+
+    TransactionTagGroupMoveRequest:
+      type: object
+      required: [newDisplayOrders]
+      properties:
+        newDisplayOrders:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/TransactionTagGroupNewDisplayOrderRequest"
+
+    TransactionTagGroupNewDisplayOrderRequest:
+      type: object
+      required: [id, displayOrder]
+      properties:
+        id:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    TransactionTagGroupDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    TransactionTagGroupInfoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    # ==== Transaction Templates ====
+    TransactionTemplateCreateRequest:
+      type: object
+      required: [name, type, categoryId, sourceAccountId]
+      properties:
+        templateType:
+          type: integer
+          description: 1=normal, 2=scheduled
+        name:
+          type: string
+          maxLength: 64
+        type:
+          type: integer
+          description: 1=modify balance, 2=income, 3=expense, 4=transfer
+        categoryId:
+          type: string
+        sourceAccountId:
+          type: string
+        destinationAccountId:
+          type: string
+        sourceAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        destinationAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        hideAmount:
+          type: boolean
+        tagIds:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+          maxLength: 255
+        scheduledFrequencyType:
+          type: integer
+          description: 0=disabled, 1=weekly, 2=monthly, 3=daily, 4=yearly
+        scheduledFrequency:
+          type: string
+          description: Cron-like frequency string
+        scheduledStartDate:
+          type: string
+          description: Start date (YYYY-MM-DD)
+        scheduledEndDate:
+          type: string
+          description: End date (YYYY-MM-DD)
+        utcOffset:
+          type: integer
+          minimum: -720
+          maximum: 840
+        clientSessionId:
+          type: string
+
+    TransactionTemplateModifyRequest:
+      type: object
+      required: [id, name, type, categoryId, sourceAccountId]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+        type:
+          type: integer
+        categoryId:
+          type: string
+        sourceAccountId:
+          type: string
+        destinationAccountId:
+          type: string
+        sourceAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        destinationAmount:
+          type: integer
+          format: int64
+          minimum: -99999999999
+          maximum: 99999999999
+        hideAmount:
+          type: boolean
+        tagIds:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+          maxLength: 255
+        scheduledFrequencyType:
+          type: integer
+        scheduledFrequency:
+          type: string
+        scheduledStartDate:
+          type: string
+        scheduledEndDate:
+          type: string
+        utcOffset:
+          type: integer
+          minimum: -720
+          maximum: 840
+
+    TransactionTemplateHideRequest:
+      type: object
+      required: [id, hidden]
+      properties:
+        id:
+          type: string
+        hidden:
+          type: boolean
+
+    TransactionTemplateMoveRequest:
+      type: object
+      required: [newDisplayOrders]
+      properties:
+        newDisplayOrders:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/TransactionTemplateNewDisplayOrderRequest"
+
+    TransactionTemplateNewDisplayOrderRequest:
+      type: object
+      required: [id, displayOrder]
+      properties:
+        id:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    TransactionTemplateDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    TransactionTemplateInfoResponse:
+      allOf:
+        - $ref: "#/components/schemas/TransactionInfoResponse"
+        - type: object
+          properties:
+            templateType:
+              type: integer
+            name:
+              type: string
+            scheduledFrequencyType:
+              type: integer
+            scheduledFrequency:
+              type: string
+            scheduledStartDate:
+              type: string
+            scheduledEndDate:
+              type: string
+            scheduledAt:
+              type: integer
+            displayOrder:
+              type: integer
+              format: int32
+            hidden:
+              type: boolean
+
+    # ==== Insights Explorers ====
+    InsightsExplorerCreateRequest:
+      type: object
+      required: [name, data]
+      properties:
+        name:
+          type: string
+          maxLength: 64
+        data:
+          type: object
+          additionalProperties: true
+          description: Free-form explorer configuration data
+        clientSessionId:
+          type: string
+
+    InsightsExplorerModifyRequest:
+      type: object
+      required: [id, name, data]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          maxLength: 64
+        data:
+          type: object
+          additionalProperties: true
+        hidden:
+          type: boolean
+        clientSessionId:
+          type: string
+
+    InsightsExplorerHideRequest:
+      type: object
+      required: [id, hidden]
+      properties:
+        id:
+          type: string
+        hidden:
+          type: boolean
+
+    InsightsExplorerMoveRequest:
+      type: object
+      required: [newDisplayOrders]
+      properties:
+        newDisplayOrders:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/InsightsExplorerNewDisplayOrderRequest"
+
+    InsightsExplorerNewDisplayOrderRequest:
+      type: object
+      required: [id, displayOrder]
+      properties:
+        id:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+
+    InsightsExplorerDeleteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+
+    InsightsExplorerInfoResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        displayOrder:
+          type: integer
+          format: int32
+        hidden:
+          type: boolean
+        data:
+          type: object
+          additionalProperties: true
+
+    # ==== LLM ====
+    RecognizedReceiptImageResponse:
+      type: object
+      properties:
+        type:
+          type: integer
+          description: 1=modify balance, 2=income, 3=expense, 4=transfer
+        time:
+          type: integer
+          format: int64
+        categoryId:
+          type: string
+        sourceAccountId:
+          type: string
+        destinationAccountId:
+          type: string
+        sourceAmount:
+          type: integer
+          format: int64
+        destinationAmount:
+          type: integer
+          format: int64
+        tagIds:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+
+    # ==== Exchange Rates ====
+    UserCustomExchangeRateUpdateRequest:
+      type: object
+      required: [currency]
+      properties:
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 currency code
+        rate:
+          type: string
+          description: Exchange rate as string
+
+    UserCustomExchangeRateDeleteRequest:
+      type: object
+      required: [currency]
+      properties:
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+
+    UserCustomExchangeRateUpdateResponse:
+      type: object
+      properties:
+        currency:
+          type: string
+        rate:
+          type: string
+        updateTime:
+          type: integer
+          format: int64
+
+    LatestExchangeRateResponse:
+      type: object
+      properties:
+        dataSource:
+          type: string
+        referenceUrl:
+          type: string
+        updateTime:
+          type: integer
+          format: int64
+        baseCurrency:
+          type: string
+        exchangeRates:
+          type: array
+          items:
+            type: object
+            properties:
+              currency:
+                type: string
+              rate:
+                type: string
+
+    # ==== Application Cloud Settings ====
+    ApplicationCloudSetting:
+      type: object
+      properties:
+        settingKey:
+          type: string
+        settingValue:
+          type: string
+
+    ApplicationCloudSettingSlice:
+      type: array
+      items:
+        $ref: "#/components/schemas/ApplicationCloudSetting"
+
+    UserApplicationCloudSettingsUpdateRequest:
+      type: object
+      properties:
+        settings:
+          $ref: "#/components/schemas/ApplicationCloudSettingSlice"
+        fullUpdate:
+          type: boolean
+          description: If true, replaces all settings; if false, merges
+
+    # ==== Import ====
+    ImportTransactionResponse:
+      type: object
+      properties:
+        type:
+          type: integer
+        categoryId:
+          type: string
+        originalCategoryName:
+          type: string
+        time:
+          type: integer
+          format: int64
+        utcOffset:
+          type: integer
+        sourceAccountId:
+          type: string
+        originalSourceAccountName:
+          type: string
+        originalSourceAccountCurrency:
+          type: string
+        destinationAccountId:
+          type: string
+        originalDestinationAccountName:
+          type: string
+        originalDestinationAccountCurrency:
+          type: string
+        sourceAmount:
+          type: integer
+          format: int64
+        destinationAmount:
+          type: integer
+          format: int64
+        tagIds:
+          type: array
+          items:
+            type: string
+        originalTagNames:
+          type: array
+          items:
+            type: string
+        comment:
+          type: string
+        geoLocation:
+          $ref: "#/components/schemas/TransactionGeoLocationResponse"
+
+    ImportTransactionResponsePageWrapper:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportTransactionResponse"
+        totalCount:
+          type: integer
+          format: int64
+
+    # ==== MCP / JSON-RPC ====
+    JSONRPCRequest:
+      type: object
+      required: [jsonrpc, method]
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        method:
+          type: string
+          description: MCP method name (e.g., initialize, tools/list, tools/call)
+        params:
+          description: Method parameters (varies by method)
+        id:
+          description: Request ID (string or number)
+
+    JSONRPCResponse:
+      type: object
+      required: [jsonrpc, id]
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        result:
+          description: Method result (varies by method)
+        error:
+          $ref: "#/components/schemas/JSONRPCError"
+        id:
+          description: Request ID matching the request
+
+    JSONRPCError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          description: Error code (-32700=parse, -32601=method not found, -32602=invalid params, -32603=internal)
+        message:
+          type: string
+        data:
+          description: Optional error details

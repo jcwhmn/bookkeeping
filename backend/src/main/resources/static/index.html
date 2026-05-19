@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bookkeeping API</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui@5.10.5/dist/swagger-ui.css">
+    <style>
+        body { margin: 0; padding: 20px; font-family: sans-serif; }
+        .info { margin-bottom: 20px; padding: 15px; background: #e8f5e9; border-radius: 5px; }
+        .info h1 { margin: 0 0 10px 0; color: #2e7d32; }
+        .info code { background: #c8e6c9; padding: 2px 5px; border-radius: 3px; }
+        .test-section { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+        input, button { padding: 8px 12px; margin: 5px; }
+        input { width: 300px; }
+        #response { margin-top: 15px; padding: 10px; background: #fff; border-radius: 3px; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>Bookkeeping API</h1>
+        <p><strong>Base URL:</strong> <code>http://localhost:8080/api/v1</code></p>
+        <p><strong>Test Login:</strong> username: <code>demo</code>, password: <code>demo123</code></p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Quick API Test</h3>
+        <p>Token: <input type="text" id="token" placeholder="JWT token from /auth/login"> (optional for public endpoints)</p>
+        <button onclick="testHealth()">Test /health</button>
+        <button onclick="testAccounts()">Test /accounts</button>
+        <div id="response"></div>
+    </div>
+    
+    <h2>API Endpoints</h2>
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <tr style="background: #f5f5f5;"><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr>
+        <tr><td>GET</td><td>/api/health</td><td>No</td><td>Health check</td></tr>
+        <tr><td>POST</td><td>/api/v1/auth/login</td><td>No</td><td>Login with username/password</td></tr>
+        <tr><td>GET</td><td>/api/v1/accounts</td><td>Yes</td><td>List user accounts</td></tr>
+        <tr><td>POST</td><td>/api/v1/accounts</td><td>Yes</td><td>Create account</td></tr>
+        <tr><td>GET</td><td>/api/v1/accounts/{id}</td><td>Yes</td><td>Get account by ID</td></tr>
+        <tr><td>PUT</td><td>/api/v1/accounts/{id}</td><td>Yes</td><td>Update account</td></tr>
+        <tr><td>DELETE</td><td>/api/v1/accounts/{id}</td><td>Yes</td><td>Delete account</td></tr>
+        <tr><td>GET</td><td>/api/v1/users/me</td><td>Yes</td><td>Get current user</td></tr>
+        <tr><td>PUT</td><td>/api/v1/users/me</td><td>Yes</td><td>Update current user</td></tr>
+    </table>
+
+    <script>
+        const baseUrl = 'http://localhost:8080/api/v1';
+        
+        async function testHealth() {
+            document.getElementById('response').textContent = 'Loading...';
+            try {
+                const res = await fetch('http://localhost:8080/api/health');
+                document.getElementById('response').textContent = await res.text();
+            } catch (e) {
+                document.getElementById('response').textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        async function testAccounts() {
+            document.getElementById('response').textContent = 'Loading...';
+            const token = document.getElementById('token').value;
+            const headers = {};
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            
+            try {
+                const res = await fetch(baseUrl + '/accounts', { headers });
+                const text = await res.text();
+                document.getElementById('response').textContent = text;
+            } catch (e) {
+                document.getElementById('response').textContent = 'Error: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>

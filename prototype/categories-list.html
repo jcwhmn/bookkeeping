@@ -1,0 +1,1435 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categories - Bookkeeping App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    :root {
+      --md-primary: #1976D2;
+      --md-primary-dark: #1565C0;
+      --md-primary-light: #E3F2FD;
+      --md-bg: #FAFAFA;
+      --md-surface: #FFFFFF;
+      --md-text: #212121;
+      --md-text-secondary: #757575;
+      --md-divider: #E0E0E0;
+      --md-sticky-bg: #F5F5F5;
+      --md-income: #4CAF50;
+      --md-expense: #F44336;
+      --md-drag-handle: #9E9E9E;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--md-bg);
+      color: var(--md-text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .app-header {
+      background: var(--md-surface);
+      border-bottom: 1px solid var(--md-divider);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-title {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .add-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--md-primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-btn:hover {
+      background: var(--md-primary-dark);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .search-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      transition: background 0.2s;
+    }
+
+    .search-btn:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* Main Content */
+    .main-content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Section */
+    .category-section {
+      background: var(--md-surface);
+      border-radius: 12px;
+      border: 1px solid var(--md-divider);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: var(--md-sticky-bg);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--md-divider);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-count {
+      background: var(--md-divider);
+      color: var(--md-text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .collapse-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .collapse-btn:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .collapse-btn.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .section-content {
+      padding: 8px 0;
+    }
+
+    .section-content.collapsed {
+      display: none;
+    }
+
+    /* Category Row */
+    .category-row {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .category-row:hover {
+      background: var(--md-primary-light);
+    }
+
+    .category-row.parent {
+      font-weight: 500;
+      font-size: 15px;
+    }
+
+    .category-row.child {
+      font-weight: 400;
+      font-size: 14px;
+      padding-left: 56px;
+    }
+
+    .drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      color: var(--md-drag-handle);
+      cursor: grab;
+      margin-right: 12px;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+
+    .category-row:hover .drag-handle {
+      opacity: 1;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .category-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 16px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .category-name {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .expand-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--md-text-secondary);
+      cursor: pointer;
+      transition: transform 0.2s;
+      margin-right: 8px;
+    }
+
+    .expand-icon.expanded {
+      transform: rotate(90deg);
+    }
+
+    .expand-icon.hidden {
+      visibility: hidden;
+    }
+
+    .category-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .category-row:hover .category-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .action-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--md-text);
+    }
+
+    .action-btn.delete:hover {
+      background: rgba(244, 67, 54, 0.1);
+      color: var(--md-expense);
+    }
+
+    /* Children Container */
+    .children-container {
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+    }
+
+    .children-container.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    /* Child count badge */
+    .child-count {
+      font-size: 12px;
+      color: var(--md-text-secondary);
+      font-weight: 400;
+    }
+
+    /* Dragging state */
+    .category-row.dragging {
+      opacity: 0.5;
+      background: var(--md-primary-light);
+    }
+
+    .category-row.drag-over {
+      border-top: 2px solid var(--md-primary);
+    }
+
+    /* Modal Overlay */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--md-surface);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 38px rgba(0, 0, 0, 0.14);
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--md-divider);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      transition: background 0.15s;
+    }
+
+    .modal-close:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--md-text);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--md-divider);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--md-text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--md-primary);
+      box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+    }
+
+    .form-input.error {
+      border-color: var(--md-expense);
+    }
+
+    .form-error {
+      color: var(--md-expense);
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .form-input.error + .form-error {
+      display: block;
+    }
+
+    /* Radio Group */
+    .radio-group {
+      display: flex;
+      gap: 16px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .radio-option input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--md-primary);
+    }
+
+    .radio-option span {
+      font-size: 14px;
+    }
+
+    /* Parent Dropdown */
+    .parent-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23757575' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 40px;
+    }
+
+    /* Icon Grid */
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .icon-option {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 20px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .icon-option:hover {
+      background: var(--md-primary-light);
+    }
+
+    .icon-option.selected {
+      border-color: var(--md-primary);
+      background: var(--md-primary-light);
+    }
+
+    /* Color Grid */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .color-option {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-option:hover {
+      transform: scale(1.1);
+    }
+
+    .color-option.selected {
+      border-color: var(--md-text);
+    }
+
+    /* Modal Footer */
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--md-divider);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--md-divider);
+      color: var(--md-text);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-primary {
+      background: var(--md-primary);
+      border: none;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--md-primary-dark);
+    }
+
+    /* Search Overlay */
+    .search-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .search-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .search-container {
+      background: var(--md-surface);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .search-input-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      font-size: 18px;
+      font-family: inherit;
+      color: var(--md-text);
+      background: transparent;
+    }
+
+    .search-input:focus {
+      outline: none;
+    }
+
+    .search-close {
+      padding: 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      border-radius: 50%;
+    }
+
+    .search-close:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-top {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .header-left {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .header-right {
+        width: 100%;
+        justify-content: flex-end;
+      }
+
+      .main-content {
+        padding: 16px;
+      }
+
+      .category-row.child {
+        padding-left: 48px;
+      }
+
+      .modal {
+        margin: 16px;
+        max-height: calc(100vh - 32px);
+      }
+
+      .icon-grid,
+      .color-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .category-row {
+        padding: 10px 16px;
+      }
+
+      .category-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+      }
+
+      .icon-grid,
+      .color-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="header-left">
+        <h1 class="header-title">Categories</h1>
+        <button class="add-btn" onclick="openAddModal()">
+          <span class="material-icons">add</span>
+          Add Category
+        </button>
+      </div>
+      <div class="header-right">
+        <button class="search-btn" onclick="openSearch()">
+          <span class="material-icons">search</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Income Section -->
+    <section class="category-section">
+      <div class="section-header">
+        <div class="section-title">
+          Income
+          <span class="section-count">4</span>
+        </div>
+        <button class="collapse-btn" onclick="toggleSection('income', this)">
+          <span class="material-icons">expand_more</span>
+        </button>
+      </div>
+      <div class="section-content" id="income-content">
+        <div class="category-row parent" data-id="salary" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #E8F5E9; color: #2E7D32;">💰</div>
+          <div class="category-name">Salary</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('salary', 'Salary', 'income', '💰', '#E8F5E9')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Salary')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="category-row parent" data-id="bonus" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #FFF3E0; color: #E65100;">💵</div>
+          <div class="category-name">Bonus</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('bonus', 'Bonus', 'income', '💵', '#FFF3E0')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Bonus')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="category-row parent" data-id="investment" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #E3F2FD; color: #1565C0;">📈</div>
+          <div class="category-name">Investment</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('investment', 'Investment', 'income', '📈', '#E3F2FD')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Investment')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="category-row parent" data-id="gift-income" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #FCE4EC; color: #C2185B;">🎁</div>
+          <div class="category-name">Gift</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('gift-income', 'Gift', 'income', '🎁', '#FCE4EC')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Gift')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Expense Section -->
+    <section class="category-section">
+      <div class="section-header">
+        <div class="section-title">
+          Expense
+          <span class="section-count">11</span>
+        </div>
+        <button class="collapse-btn collapsed" onclick="toggleSection('expense', this)">
+          <span class="material-icons">expand_more</span>
+        </button>
+      </div>
+      <div class="section-content collapsed" id="expense-content">
+        <!-- Food -->
+        <div class="category-row parent" data-id="food" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon" onclick="toggleChildren('food', this)">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #FFF8E1; color: #F57C00;">🍔</div>
+          <div class="category-name">
+            Food
+            <span class="child-count">(2)</span>
+          </div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('food', 'Food', 'expense', '🍔', '#FFF8E1')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Food')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+        <div class="children-container" id="food-children">
+          <div class="category-row child" data-id="groceries" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #E8F5E9; color: #388E3C;">🍎</div>
+            <div class="category-name">Groceries</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('groceries', 'Groceries', 'expense', '🍎', '#E8F5E9')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Groceries')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="category-row child" data-id="restaurants" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #FFEBEE; color: #D32F2F;">🍕</div>
+            <div class="category-name">Restaurants</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('restaurants', 'Restaurants', 'expense', '🍕', '#FFEBEE')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Restaurants')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transport -->
+        <div class="category-row parent" data-id="transport" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon" onclick="toggleChildren('transport', this)">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #E3F2FD; color: #1976D2;">🚗</div>
+          <div class="category-name">
+            Transport
+            <span class="child-count">(3)</span>
+          </div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('transport', 'Transport', 'expense', '🚗', '#E3F2FD')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Transport')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+        <div class="children-container" id="transport-children">
+          <div class="category-row child" data-id="taxi" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #F3E5F5; color: #7B1FA2;">🚕</div>
+            <div class="category-name">Taxi/Ride</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('taxi', 'Taxi/Ride', 'expense', '🚕', '#F3E5F5')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Taxi/Ride')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="category-row child" data-id="bus" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #E8EAF6; color: #3949AB;">🚌</div>
+            <div class="category-name">Bus/Train</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('bus', 'Bus/Train', 'expense', '🚌', '#E8EAF6')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Bus/Train')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="category-row child" data-id="gas" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #FFF3E0; color: #EF6C00;">⛽</div>
+            <div class="category-name">Gas/Fuel</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('gas', 'Gas/Fuel', 'expense', '⛽', '#FFF3E0')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Gas/Fuel')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Housing -->
+        <div class="category-row parent" data-id="housing" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon" onclick="toggleChildren('housing', this)">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #F1F8E9; color: #558B2F;">🏠</div>
+          <div class="category-name">
+            Housing
+            <span class="child-count">(2)</span>
+          </div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('housing', 'Housing', 'expense', '🏠', '#F1F8E9')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Housing')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+        <div class="children-container" id="housing-children">
+          <div class="category-row child" data-id="rent" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #E0F2F1; color: #00695C;">🏡</div>
+            <div class="category-name">Rent/Mortgage</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('rent', 'Rent/Mortgage', 'expense', '🏡', '#E0F2F1')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Rent/Mortgage')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+          <div class="category-row child" data-id="utilities" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+            <div class="drag-handle">
+              <span class="material-icons" style="font-size: 18px;">more_vert</span>
+            </div>
+            <div class="expand-icon hidden">
+              <span class="material-icons">chevron_right</span>
+            </div>
+            <div class="category-icon" style="background: #FFF9C4; color: #F9A825;">💡</div>
+            <div class="category-name">Utilities</div>
+            <div class="category-actions">
+              <button class="action-btn" onclick="openEditModal('utilities', 'Utilities', 'expense', '💡', '#FFF9C4')" title="Edit">
+                <span class="material-icons">edit</span>
+              </button>
+              <button class="action-btn delete" onclick="confirmDelete('Utilities')" title="Delete">
+                <span class="material-icons">delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Healthcare -->
+        <div class="category-row parent" data-id="healthcare" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #FFEBEE; color: #C62828;">🏥</div>
+          <div class="category-name">Healthcare</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('healthcare', 'Healthcare', 'expense', '🏥', '#FFEBEE')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Healthcare')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Entertainment -->
+        <div class="category-row parent" data-id="entertainment" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #F3E5F5; color: #7B1FA2;">🎬</div>
+          <div class="category-name">Entertainment</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('entertainment', 'Entertainment', 'expense', '🎬', '#F3E5F5')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Entertainment')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Shopping -->
+        <div class="category-row parent" data-id="shopping" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+          <div class="drag-handle">
+            <span class="material-icons" style="font-size: 18px;">more_vert</span>
+          </div>
+          <div class="expand-icon hidden">
+            <span class="material-icons">chevron_right</span>
+          </div>
+          <div class="category-icon" style="background: #E1F5FE; color: #0277BD;">🛍️</div>
+          <div class="category-name">Shopping</div>
+          <div class="category-actions">
+            <button class="action-btn" onclick="openEditModal('shopping', 'Shopping', 'expense', '🛍️', '#E1F5FE')" title="Edit">
+              <span class="material-icons">edit</span>
+            </button>
+            <button class="action-btn delete" onclick="confirmDelete('Shopping')" title="Delete">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add/Edit Category Modal -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">Add Category</h2>
+        <button class="modal-close" onclick="closeModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="categoryForm" onsubmit="handleSubmit(event)">
+          <input type="hidden" id="categoryId" value="">
+          
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" class="form-input" id="categoryName" placeholder="Enter category name" required>
+            <div class="form-error">Please enter a category name</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" name="categoryType" value="expense" checked>
+                <span>Expense</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="categoryType" value="income">
+                <span>Income</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Parent Category (optional)</label>
+            <select class="form-input parent-select" id="parentCategory">
+              <option value="">None (top-level)</option>
+              <optgroup label="Expense">
+                <option value="food">🍔 Food</option>
+                <option value="transport">🚗 Transport</option>
+                <option value="housing">🏠 Housing</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Icon</label>
+            <div class="icon-grid" id="iconGrid">
+              <div class="icon-option selected" data-icon="💰" onclick="selectIcon(this)">💰</div>
+              <div class="icon-option" data-icon="💵" onclick="selectIcon(this)">💵</div>
+              <div class="icon-option" data-icon="📈" onclick="selectIcon(this)">📈</div>
+              <div class="icon-option" data-icon="🎁" onclick="selectIcon(this)">🎁</div>
+              <div class="icon-option" data-icon="🍔" onclick="selectIcon(this)">🍔</div>
+              <div class="icon-option" data-icon="🍎" onclick="selectIcon(this)">🍎</div>
+              <div class="icon-option" data-icon="🍕" onclick="selectIcon(this)">🍕</div>
+              <div class="icon-option" data-icon="🚗" onclick="selectIcon(this)">🚗</div>
+              <div class="icon-option" data-icon="🚌" onclick="selectIcon(this)">🚌</div>
+              <div class="icon-option" data-icon="⛽" onclick="selectIcon(this)">⛽</div>
+              <div class="icon-option" data-icon="🏠" onclick="selectIcon(this)">🏠</div>
+              <div class="icon-option" data-icon="💡" onclick="selectIcon(this)">💡</div>
+              <div class="icon-option" data-icon="🏥" onclick="selectIcon(this)">🏥</div>
+              <div class="icon-option" data-icon="🎬" onclick="selectIcon(this)">🎬</div>
+              <div class="icon-option" data-icon="🛍️" onclick="selectIcon(this)">🛍️</div>
+              <div class="icon-option" data-icon="🎮" onclick="selectIcon(this)">🎮</div>
+              <div class="icon-option" data-icon="📚" onclick="selectIcon(this)">📚</div>
+              <div class="icon-option" data-icon="✈️" onclick="selectIcon(this)">✈️</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <div class="color-grid" id="colorGrid">
+              <div class="color-option selected" data-color="#E8F5E9" style="background: #E8F5E9;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#FFF3E0" style="background: #FFF3E0;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#E3F2FD" style="background: #E3F2FD;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#FCE4EC" style="background: #FCE4EC;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#FFF8E1" style="background: #FFF8E1;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#FFEBEE" style="background: #FFEBEE;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#F3E5F5" style="background: #F3E5F5;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#E8EAF6" style="background: #E8EAF6;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#E0F2F1" style="background: #E0F2F1;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#FFF9C4" style="background: #FFF9C4;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#F1F8E9" style="background: #F1F8E9;" onclick="selectColor(this)"></div>
+              <div class="color-option" data-color="#E1F5FE" style="background: #E1F5FE;" onclick="selectColor(this)"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="document.getElementById('categoryForm').requestSubmit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Overlay -->
+  <div class="search-overlay" id="searchOverlay" onclick="closeSearchOnOverlay(event)">
+    <div class="search-container" onclick="event.stopPropagation()">
+      <div class="search-input-wrapper">
+        <span class="material-icons" style="color: var(--md-text-secondary);">search</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search categories..." oninput="handleSearch(event)">
+      </div>
+      <button class="search-close" onclick="closeSearch()">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let draggedElement = null;
+    let selectedIcon = '💰';
+    let selectedColor = '#E8F5E9';
+
+    // Section Toggle
+    function toggleSection(section, btn) {
+      const content = document.getElementById(`${section}-content`);
+      btn.classList.toggle('collapsed');
+      content.classList.toggle('collapsed');
+    }
+
+    // Children Toggle
+    function toggleChildren(id, iconEl) {
+      const container = document.getElementById(`${id}-children`);
+      const expandIcon = iconEl.querySelector('.material-icons');
+      
+      container.classList.toggle('collapsed');
+      expandIcon.classList.toggle('expanded');
+      
+      // Update child count visibility
+      const parentRow = iconEl.closest('.category-row');
+      const childCount = parentRow.querySelector('.child-count');
+      if (childCount) {
+        childCount.style.display = container.classList.contains('collapsed') ? 'inline' : 'none';
+      }
+    }
+
+    // Modal Functions
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = 'Add Category';
+      document.getElementById('categoryId').value = '';
+      document.getElementById('categoryName').value = '';
+      document.getElementById('categoryName').classList.remove('error');
+      document.querySelector('input[name="categoryType"][value="expense"]').checked = true;
+      document.getElementById('parentCategory').value = '';
+      
+      // Reset selections
+      document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
+      document.querySelector('.icon-option[data-icon="💰"]').classList.add('selected');
+      selectedIcon = '💰';
+      
+      document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+      document.querySelector('.color-option[data-color="#E8F5E9"]').classList.add('selected');
+      selectedColor = '#E8F5E9';
+      
+      document.getElementById('categoryModal').classList.add('active');
+      document.getElementById('categoryName').focus();
+    }
+
+    function openEditModal(id, name, type, icon, color) {
+      document.getElementById('modalTitle').textContent = 'Edit Category';
+      document.getElementById('categoryId').value = id;
+      document.getElementById('categoryName').value = name;
+      document.getElementById('categoryName').classList.remove('error');
+      document.querySelector(`input[name="categoryType"][value="${type}"]`).checked = true;
+      
+      // Set icon and color
+      selectedIcon = icon;
+      selectedColor = color;
+      
+      document.querySelectorAll('.icon-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.icon === icon);
+      });
+      
+      document.querySelectorAll('.color-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.color === color);
+      });
+      
+      document.getElementById('categoryModal').classList.add('active');
+      document.getElementById('categoryName').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('categoryModal').classList.remove('active');
+    }
+
+    function selectIcon(el) {
+      document.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedIcon = el.dataset.icon;
+    }
+
+    function selectColor(el) {
+      document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedColor = el.dataset.color;
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      
+      const nameInput = document.getElementById('categoryName');
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        nameInput.classList.add('error');
+        nameInput.focus();
+        return;
+      }
+      
+      nameInput.classList.remove('error');
+      
+      const type = document.querySelector('input[name="categoryType"]:checked').value;
+      const parentId = document.getElementById('parentCategory').value;
+      const categoryId = document.getElementById('categoryId').value;
+      
+      // In production, this would save to backend
+      console.log('Saving category:', {
+        id: categoryId || 'new',
+        name,
+        type,
+        parentId: parentId || null,
+        icon: selectedIcon,
+        color: selectedColor
+      });
+      
+      closeModal();
+      
+      // Show success feedback
+      const action = categoryId ? 'updated' : 'added';
+      showToast(`Category "${name}" ${action}`);
+    }
+
+    // Delete Confirmation
+    function confirmDelete(categoryName) {
+      if (confirm(`Delete "${categoryName}"? This action cannot be undone.`)) {
+        console.log('Deleting category:', categoryName);
+        showToast(`Category "${categoryName}" deleted`);
+      }
+    }
+
+    // Search
+    function openSearch() {
+      document.getElementById('searchOverlay').classList.add('active');
+      document.getElementById('searchInput').focus();
+    }
+
+    function closeSearch() {
+      document.getElementById('searchOverlay').classList.remove('active');
+      document.getElementById('searchInput').value = '';
+      // Reset highlighting
+      document.querySelectorAll('.category-row').forEach(row => {
+        row.style.display = '';
+      });
+    }
+
+    function closeSearchOnOverlay(event) {
+      if (event.target === event.currentTarget) {
+        closeSearch();
+      }
+    }
+
+    function handleSearch(event) {
+      const query = event.target.value.toLowerCase().trim();
+      
+      document.querySelectorAll('.category-row').forEach(row => {
+        const name = row.querySelector('.category-name').textContent.toLowerCase();
+        row.style.display = name.includes(query) || query === '' ? '' : 'none';
+      });
+    }
+
+    // Drag and Drop
+    function handleDragStart(event) {
+      draggedElement = event.target.closest('.category-row');
+      draggedElement.classList.add('dragging');
+      event.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragEnd(event) {
+      if (draggedElement) {
+        draggedElement.classList.remove('dragging');
+        draggedElement = null;
+      }
+      document.querySelectorAll('.category-row.drag-over').forEach(el => {
+        el.classList.remove('drag-over');
+      });
+    }
+
+    function handleDragOver(event) {
+      event.preventDefault();
+      const row = event.target.closest('.category-row');
+      if (row && row !== draggedElement) {
+        row.classList.add('drag-over');
+      }
+    }
+
+    function handleDrop(event) {
+      event.preventDefault();
+      const targetRow = event.target.closest('.category-row');
+      
+      if (targetRow && targetRow !== draggedElement) {
+        // Get bounding rectangles
+        const rect = targetRow.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        
+        // Determine if dropping above or below
+        if (event.clientY < midY) {
+          targetRow.parentNode.insertBefore(draggedElement, targetRow);
+        } else {
+          targetRow.parentNode.insertBefore(draggedElement, targetRow.nextSibling);
+        }
+        
+        showToast('Category reordered');
+      }
+      
+      targetRow?.classList.remove('drag-over');
+    }
+
+    // Toast notification
+    function showToast(message) {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #323232;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 2000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeSearch();
+      }
+    });
+
+    // Close modal on overlay click
+    document.getElementById('categoryModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+</html>

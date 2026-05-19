@@ -1,0 +1,817 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounts — Bookkeeping</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1976D2;
+      --primary-hover: #1565C0;
+      --positive: #4CAF50;
+      --negative: #F44336;
+      --surface: #FFFFFF;
+      --background: #FAFAFA;
+      --text-primary: #111111;
+      --text-secondary: #666666;
+      --text-muted: #9E9E9E;
+      --border: #E0E0E0;
+      --shadow: 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+
+      --cash-accent: #4CAF50;
+      --checking-accent: #2196F3;
+      --savings-accent: #9C27B0;
+      --credit-accent: #FF9800;
+      --investment-accent: #00BCD4;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--background);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      height: 40px;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-icon:hover {
+      background: rgba(0,0,0,0.04);
+      color: var(--text-primary);
+    }
+
+    .filter-section {
+      background: var(--surface);
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-tabs {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-tab {
+      padding: 16px 16px 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      white-space: nowrap;
+      transition: color 0.2s;
+    }
+
+    .filter-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .filter-tab.active {
+      color: var(--primary);
+    }
+
+    .filter-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      right: 16px;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 1px;
+    }
+
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background: var(--background);
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 6px;
+    }
+
+    .filter-tab.active .tab-count {
+      background: rgba(25, 118, 210, 0.12);
+      color: var(--primary);
+    }
+
+    .main-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .accounts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 1024px) {
+      .accounts-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .accounts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header-content {
+        flex-wrap: wrap;
+      }
+
+      .main-content {
+        padding: 16px;
+      }
+    }
+
+    .account-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .account-card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .account-card.hidden {
+      display: none;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .account-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .account-icon .material-icons-round {
+      font-size: 24px;
+      color: white;
+    }
+
+    .account-icon.cash { background: var(--cash-accent); }
+    .account-icon.checking { background: var(--checking-accent); }
+    .account-icon.savings { background: var(--savings-accent); }
+    .account-icon.credit { background: var(--credit-accent); }
+    .account-icon.investment { background: var(--investment-accent); }
+
+    .card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .account-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .account-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .account-meta .dot {
+      width: 3px;
+      height: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+    }
+
+    .account-balance {
+      text-align: right;
+    }
+
+    .balance-amount {
+      font-size: 18px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .balance-amount.positive {
+      color: var(--positive);
+    }
+
+    .balance-amount.negative {
+      color: var(--negative);
+    }
+
+    .last-activity {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .card-actions {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .account-card:hover .card-actions {
+      opacity: 1;
+    }
+
+    .card-action-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: rgba(0,0,0,0.04);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .card-action-btn:hover {
+      background: rgba(0,0,0,0.08);
+      color: var(--text-primary);
+    }
+
+    .card-action-btn.archive:hover {
+      color: var(--credit-accent);
+    }
+
+    .card-footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .activity-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .activity-label span {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .activity-bar {
+      height: 4px;
+      background: var(--background);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .activity-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .activity-fill.cash { background: var(--cash-accent); }
+    .activity-fill.checking { background: var(--checking-accent); }
+    .activity-fill.savings { background: var(--savings-accent); }
+    .activity-fill.credit { background: var(--credit-accent); }
+    .activity-fill.investment { background: var(--investment-accent); }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+      padding: 24px;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.24);
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.12);
+    }
+
+    .form-select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 20px;
+      padding-right: 44px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .modal-footer {
+      padding: 16px 24px 24px;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .btn-secondary {
+      height: 40px;
+      padding: 0 20px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--background);
+      border-color: var(--text-muted);
+    }
+
+    .btn-primary[type="submit"] {
+      height: 40px;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>Accounts</h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn-primary" onclick="openModal()">
+          <span class="material-icons-round">add</span>
+          Add Account
+        </button>
+        <button class="btn-icon" title="Settings">
+          <span class="material-icons-round">settings</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="filter-section">
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All<span class="tab-count">6</span></button>
+      <button class="filter-tab" data-filter="cash">Cash<span class="tab-count">1</span></button>
+      <button class="filter-tab" data-filter="checking">Bank<span class="tab-count">2</span></button>
+      <button class="filter-tab" data-filter="credit">Credit<span class="tab-count">1</span></button>
+      <button class="filter-tab" data-filter="investment">Investment<span class="tab-count">1</span></button>
+      <button class="filter-tab" data-filter="archived">Archived<span class="tab-count">1</span></button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="accounts-grid" id="accountsGrid">
+      <div class="account-card" data-type="cash" data-name="Cash">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Edit"><span class="material-icons-round" style="font-size:18px">edit</span></button>
+          <button class="card-action-btn archive" title="Archive"><span class="material-icons-round" style="font-size:18px">archive</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon cash"><span class="material-icons-round">wallet</span></div>
+          <div class="card-info">
+            <div class="account-name">Cash</div>
+            <div class="account-meta"><span>Cash</span><span class="dot"></span><span>USD</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount positive">$2,500.00</div>
+            <div class="last-activity">Last: Today</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>Recent Activity</span><span>85%</span></div>
+          <div class="activity-bar"><div class="activity-fill cash" style="width:85%"></div></div>
+        </div>
+      </div>
+
+      <div class="account-card" data-type="checking" data-name="Checking (Chase)">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Edit"><span class="material-icons-round" style="font-size:18px">edit</span></button>
+          <button class="card-action-btn archive" title="Archive"><span class="material-icons-round" style="font-size:18px">archive</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon checking"><span class="material-icons-round">account_balance</span></div>
+          <div class="card-info">
+            <div class="account-name">Checking (Chase)</div>
+            <div class="account-meta"><span>Checking</span><span class="dot"></span><span>USD</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount positive">$5,200.50</div>
+            <div class="last-activity">Last: 2 days ago</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>Recent Activity</span><span>92%</span></div>
+          <div class="activity-bar"><div class="activity-fill checking" style="width:92%"></div></div>
+        </div>
+      </div>
+
+      <div class="account-card" data-type="savings" data-name="Emergency Fund">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Edit"><span class="material-icons-round" style="font-size:18px">edit</span></button>
+          <button class="card-action-btn archive" title="Archive"><span class="material-icons-round" style="font-size:18px">archive</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon savings"><span class="material-icons-round">savings</span></div>
+          <div class="card-info">
+            <div class="account-name">Emergency Fund</div>
+            <div class="account-meta"><span>Savings</span><span class="dot"></span><span>USD</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount positive">$15,000.00</div>
+            <div class="last-activity">Last: 1 week ago</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>Recent Activity</span><span>45%</span></div>
+          <div class="activity-bar"><div class="activity-fill savings" style="width:45%"></div></div>
+        </div>
+      </div>
+
+      <div class="account-card" data-type="credit" data-name="Credit Card (Visa)">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Edit"><span class="material-icons-round" style="font-size:18px">edit</span></button>
+          <button class="card-action-btn archive" title="Archive"><span class="material-icons-round" style="font-size:18px">archive</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon credit"><span class="material-icons-round">credit_card</span></div>
+          <div class="card-info">
+            <div class="account-name">Credit Card (Visa)</div>
+            <div class="account-meta"><span>Credit</span><span class="dot"></span><span>USD</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount negative">-$1,200.00</div>
+            <div class="last-activity">Due: May 25</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>Credit Used</span><span>38%</span></div>
+          <div class="activity-bar"><div class="activity-fill credit" style="width:38%"></div></div>
+        </div>
+      </div>
+
+      <div class="account-card" data-type="investment" data-name="Investment Portfolio">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Edit"><span class="material-icons-round" style="font-size:18px">edit</span></button>
+          <button class="card-action-btn archive" title="Archive"><span class="material-icons-round" style="font-size:18px">archive</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon investment"><span class="material-icons-round">trending_up</span></div>
+          <div class="card-info">
+            <div class="account-name">Investment Portfolio</div>
+            <div class="account-meta"><span>Investment</span><span class="dot"></span><span>USD</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount positive">$42,350.75</div>
+            <div class="last-activity">Last: 3 days ago</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>YTD Return</span><span>+12.4%</span></div>
+          <div class="activity-bar"><div class="activity-fill investment" style="width:72%"></div></div>
+        </div>
+      </div>
+
+      <div class="account-card" data-type="checking" data-name="Checking (BoA)">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Edit"><span class="material-icons-round" style="font-size:18px">edit</span></button>
+          <button class="card-action-btn archive" title="Archive"><span class="material-icons-round" style="font-size:18px">archive</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon checking"><span class="material-icons-round">account_balance</span></div>
+          <div class="card-info">
+            <div class="account-name">Checking (BoA)</div>
+            <div class="account-meta"><span>Checking</span><span class="dot"></span><span>USD</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount positive">$3,847.25</div>
+            <div class="last-activity">Last: Yesterday</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>Recent Activity</span><span>68%</span></div>
+          <div class="activity-bar"><div class="activity-fill checking" style="width:68%"></div></div>
+        </div>
+      </div>
+
+      <div class="account-card hidden" data-type="archived" data-name="Old Savings">
+        <div class="card-actions">
+          <button class="card-action-btn" title="Restore"><span class="material-icons-round" style="font-size:18px">unarchive</span></button>
+          <button class="card-action-btn" title="Delete"><span class="material-icons-round" style="font-size:18px">delete</span></button>
+        </div>
+        <div class="card-header">
+          <div class="account-icon" style="background:var(--text-muted)"><span class="material-icons-round">savings</span></div>
+          <div class="card-info">
+            <div class="account-name">Old Savings</div>
+            <div class="account-meta"><span>Savings</span><span class="dot"></span><span>Archived</span></div>
+          </div>
+          <div class="account-balance">
+            <div class="balance-amount positive">$500.00</div>
+            <div class="last-activity">Closed: Jan 2024</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="activity-label"><span>Account Status</span><span>Archived</span></div>
+          <div class="activity-bar"><div class="activity-fill" style="width:0%;background:var(--text-muted)"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Add Account</h2>
+        <button class="btn-icon" onclick="closeModal()"><span class="material-icons-round">close</span></button>
+      </div>
+      <form id="addAccountForm" onsubmit="handleSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="accountName">Account Name</label>
+            <input type="text" id="accountName" class="form-input" placeholder="e.g., Chase Checking" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="accountType">Account Type</label>
+              <select id="accountType" class="form-input form-select" required>
+                <option value="">Select type</option>
+                <option value="cash">Cash</option>
+                <option value="checking">Checking</option>
+                <option value="savings">Savings</option>
+                <option value="credit">Credit Card</option>
+                <option value="investment">Investment</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="currency">Currency</label>
+              <select id="currency" class="form-input form-select" required>
+                <option value="USD" selected>USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="JPY">JPY (¥)</option>
+                <option value="CAD">CAD ($)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="initialBalance">Initial Balance</label>
+            <input type="number" id="initialBalance" class="form-input" placeholder="0.00" step="0.01" value="0.00" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-primary"><span class="material-icons-round" style="font-size:18px">add</span>Add Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const accountCards = document.querySelectorAll('.account-card');
+
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const filter = tab.dataset.filter;
+        accountCards.forEach(card => {
+          const type = card.dataset.type;
+          if (filter === 'all') card.classList.remove('hidden');
+          else if (filter === type) card.classList.remove('hidden');
+          else card.classList.add('hidden');
+        });
+      });
+    });
+
+    const modalOverlay = document.getElementById('modalOverlay');
+
+    function openModal() {
+      modalOverlay.classList.add('active');
+      document.getElementById('accountName').focus();
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('active');
+      document.getElementById('addAccountForm').reset();
+    }
+
+    function closeModalOnOverlay(event) {
+      if (event.target === modalOverlay) closeModal();
+    }
+
+    function handleSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('accountName').value;
+      const type = document.getElementById('accountType').value;
+      const balance = parseFloat(document.getElementById('initialBalance').value);
+      const currency = document.getElementById('currency').value;
+      alert(`Account "${name}" (${type}) created with balance ${currency} ${balance.toFixed(2)}`);
+      closeModal();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modalOverlay.classList.contains('active')) closeModal();
+    });
+  </script>
+</body>
+</html>

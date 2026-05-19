@@ -1,0 +1,1526 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions - Bookkeeping App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    :root {
+      --md-primary: #1976D2;
+      --md-primary-dark: #1565C0;
+      --md-income: #4CAF50;
+      --md-expense: #F44336;
+      --md-transfer: #2196F3;
+      --md-bg: #FAFAFA;
+      --md-surface: #FFFFFF;
+      --md-text: #212121;
+      --md-text-secondary: #757575;
+      --md-divider: #E0E0E0;
+      --md-sticky-bg: #F5F5F5;
+      --md-tag-bg: #E3F2FD;
+      --md-tag-text: #1976D2;
+      --md-account-bg: #EEEEEE;
+      --md-hover: rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--md-bg);
+      color: var(--md-text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .app-header {
+      background: var(--md-surface);
+      border-bottom: 1px solid var(--md-divider);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--md-text);
+    }
+
+    .add-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--md-primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-btn:hover {
+      background: var(--md-primary-dark);
+    }
+
+    .add-btn .material-icons {
+      font-size: 20px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .month-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--md-bg);
+      border: 1px solid var(--md-divider);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .month-selector:hover {
+      background: var(--md-hover);
+    }
+
+    .month-selector .material-icons {
+      font-size: 20px;
+      color: var(--md-text-secondary);
+    }
+
+    .settings-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      transition: background 0.2s;
+    }
+
+    .settings-btn:hover {
+      background: var(--md-hover);
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+      background: var(--md-surface);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--md-divider);
+      position: sticky;
+      top: 65px;
+      z-index: 90;
+    }
+
+    .filter-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .type-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--md-divider);
+      padding-bottom: 12px;
+    }
+
+    .type-tab {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--md-text-secondary);
+      cursor: pointer;
+      border-radius: 20px;
+      transition: all 0.2s;
+    }
+
+    .type-tab:hover {
+      background: var(--md-hover);
+    }
+
+    .type-tab.active {
+      background: var(--md-primary);
+      color: white;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+    }
+
+    .search-box .material-icons {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--md-text-secondary);
+      font-size: 20px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 12px 10px 40px;
+      border: 1px solid var(--md-divider);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--md-bg);
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--md-primary);
+      box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+    }
+
+    .filter-dropdown {
+      position: relative;
+    }
+
+    .filter-dropdown-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 1px solid var(--md-divider);
+      border-radius: 8px;
+      background: var(--md-surface);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 140px;
+      transition: border-color 0.2s;
+    }
+
+    .filter-dropdown-btn:hover {
+      border-color: var(--md-primary);
+    }
+
+    .filter-dropdown-btn .material-icons {
+      font-size: 18px;
+      color: var(--md-text-secondary);
+      margin-left: auto;
+    }
+
+    .filter-dropdown-btn.active {
+      border-color: var(--md-primary);
+      background: rgba(25, 118, 210, 0.05);
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      min-width: 180px;
+      background: var(--md-surface);
+      border: 1px solid var(--md-divider);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      z-index: 200;
+      display: none;
+      overflow: hidden;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .dropdown-item:hover {
+      background: var(--md-hover);
+    }
+
+    .dropdown-item.selected {
+      background: rgba(25, 118, 210, 0.08);
+      color: var(--md-primary);
+    }
+
+    .dropdown-item .check-icon {
+      margin-left: auto;
+      font-size: 18px;
+      color: var(--md-primary);
+    }
+
+    /* Transaction List */
+    .transaction-list-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px 24px;
+    }
+
+    .date-group {
+      margin-bottom: 8px;
+    }
+
+    .date-header {
+      position: sticky;
+      top: 157px;
+      background: var(--md-sticky-bg);
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--md-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      z-index: 50;
+      border-bottom: 1px solid var(--md-divider);
+    }
+
+    .transaction-row {
+      display: grid;
+      grid-template-columns: 56px 1fr auto auto;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--md-surface);
+      border-bottom: 1px solid var(--md-divider);
+      cursor: pointer;
+      transition: background 0.15s;
+      min-height: 72px;
+    }
+
+    .transaction-row:hover {
+      background: var(--md-hover);
+    }
+
+    .transaction-row:hover .row-actions {
+      opacity: 1;
+    }
+
+    .category-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .category-icon.expense {
+      background: rgba(244, 67, 54, 0.12);
+    }
+
+    .category-icon.income {
+      background: rgba(76, 175, 80, 0.12);
+    }
+
+    .category-icon.transfer {
+      background: rgba(33, 150, 243, 0.12);
+    }
+
+    .transaction-info {
+      min-width: 0;
+    }
+
+    .category-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--md-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subcategory {
+      font-weight: 400;
+      color: var(--md-text-secondary);
+    }
+
+    .notes {
+      font-size: 13px;
+      color: var(--md-text-secondary);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+
+    .amount-section {
+      text-align: right;
+      min-width: 100px;
+    }
+
+    .amount {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .amount.expense {
+      color: var(--md-expense);
+    }
+
+    .amount.income {
+      color: var(--md-income);
+    }
+
+    .amount.transfer {
+      color: var(--md-transfer);
+    }
+
+    .account-badge {
+      display: inline-block;
+      font-size: 12px;
+      background: var(--md-account-bg);
+      color: var(--md-text-secondary);
+      padding: 4px 10px;
+      border-radius: 12px;
+      margin-top: 6px;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .action-icon-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: var(--md-surface);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--md-text-secondary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.15s;
+    }
+
+    .action-icon-btn:hover {
+      background: var(--md-primary);
+      color: white;
+    }
+
+    .action-icon-btn.delete:hover {
+      background: var(--md-expense);
+    }
+
+    .tags-section {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      min-width: 120px;
+    }
+
+    .tag {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .tag.food {
+      background: #FFF3E0;
+      color: #E65100;
+    }
+
+    .tag.groceries {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .tag.income {
+      background: #E3F2FD;
+      color: #1976D2;
+    }
+
+    .tag.transfer-tag {
+      background: #E3F2FD;
+      color: #2196F3;
+    }
+
+    .transfer-dest {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--md-transfer);
+      margin-top: 4px;
+    }
+
+    .transfer-dest .material-icons {
+      font-size: 14px;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      background: var(--md-surface);
+      border-top: 1px solid var(--md-divider);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .pagination-info {
+      font-size: 14px;
+      color: var(--md-text-secondary);
+    }
+
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-btn {
+      min-width: 40px;
+      height: 40px;
+      border: 1px solid var(--md-divider);
+      background: var(--md-surface);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--md-primary);
+      color: var(--md-primary);
+    }
+
+    .page-btn.active {
+      background: var(--md-primary);
+      color: white;
+      border-color: var(--md-primary);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .page-btn.nav {
+      background: var(--md-bg);
+    }
+
+    .load-more-btn {
+      padding: 12px 24px;
+      background: var(--md-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .load-more-btn:hover {
+      background: var(--md-primary-dark);
+    }
+
+    /* Dropdown overlay */
+    .dropdown-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      display: none;
+    }
+
+    .dropdown-overlay.show {
+      display: block;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .app-header {
+        padding: 12px 16px;
+      }
+
+      .header-title {
+        font-size: 20px;
+      }
+
+      .add-btn span {
+        display: none;
+      }
+
+      .add-btn {
+        padding: 10px;
+        border-radius: 50%;
+      }
+
+      .filter-bar {
+        padding: 12px 16px;
+        top: 61px;
+      }
+
+      .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-box {
+        max-width: none;
+      }
+
+      .filter-dropdown-btn {
+        width: 100%;
+      }
+
+      .transaction-list-container {
+        padding: 0 16px 16px;
+      }
+
+      .transaction-row {
+        grid-template-columns: 44px 1fr;
+        gap: 12px;
+        padding: 14px 16px;
+      }
+
+      .category-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+
+      .amount-section {
+        grid-column: 2;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: -8px;
+      }
+
+      .row-actions {
+        grid-column: 2;
+        opacity: 1;
+        margin-top: 8px;
+      }
+
+      .tags-section {
+        grid-column: 2;
+        justify-content: flex-start;
+      }
+
+      .date-header {
+        top: 175px;
+      }
+
+      .pagination {
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .pagination-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    /* Context menu for mobile */
+    .context-menu {
+      position: fixed;
+      background: var(--md-surface);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 300;
+      min-width: 180px;
+      display: none;
+      overflow: hidden;
+    }
+
+    .context-menu.show {
+      display: block;
+    }
+
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .context-menu-item:hover {
+      background: var(--md-hover);
+    }
+
+    .context-menu-item .material-icons {
+      font-size: 20px;
+      color: var(--md-text-secondary);
+    }
+
+    .context-menu-item.danger {
+      color: var(--md-expense);
+    }
+
+    .context-menu-item.danger .material-icons {
+      color: var(--md-expense);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="header-left">
+        <h1 class="header-title">Transactions</h1>
+        <button class="add-btn">
+          <span class="material-icons">add</span>
+          <span>Add Transaction</span>
+        </button>
+      </div>
+      <div class="header-right">
+        <div class="month-selector">
+          <span class="material-icons">chevron_left</span>
+          <span>May 2026</span>
+          <span class="material-icons">chevron_right</span>
+        </div>
+        <button class="settings-btn">
+          <span class="material-icons">settings</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-bar-inner">
+      <div class="type-tabs">
+        <button class="type-tab active">All</button>
+        <button class="type-tab">Expense</button>
+        <button class="type-tab">Income</button>
+        <button class="type-tab">Transfer</button>
+      </div>
+      <div class="filter-row">
+        <div class="search-box">
+          <span class="material-icons">search</span>
+          <input type="text" placeholder="Search transactions...">
+        </div>
+        <div class="filter-dropdown">
+          <button class="filter-dropdown-btn" id="accountFilterBtn">
+            <span class="material-icons">account_balance</span>
+            <span>All Accounts</span>
+            <span class="material-icons">expand_more</span>
+          </button>
+          <div class="dropdown-menu" id="accountDropdown">
+            <div class="dropdown-item selected">
+              All Accounts
+              <span class="material-icons check-icon">check</span>
+            </div>
+            <div class="dropdown-item">
+              Checking
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Savings
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Cash
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Credit Card
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+          </div>
+        </div>
+        <div class="filter-dropdown">
+          <button class="filter-dropdown-btn" id="categoryFilterBtn">
+            <span class="material-icons">category</span>
+            <span>All Categories</span>
+            <span class="material-icons">expand_more</span>
+          </button>
+          <div class="dropdown-menu" id="categoryDropdown">
+            <div class="dropdown-item selected">
+              All Categories
+              <span class="material-icons check-icon">check</span>
+            </div>
+            <div class="dropdown-item">
+              Food & Dining
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Transportation
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Shopping
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Entertainment
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+            <div class="dropdown-item">
+              Bills & Utilities
+              <span class="material-icons check-icon" style="visibility: hidden;">check</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dropdown overlay for closing menus -->
+  <div class="dropdown-overlay" id="dropdownOverlay"></div>
+
+  <!-- Transaction List -->
+  <div class="transaction-list-container">
+    <!-- Today -->
+    <div class="date-group">
+      <div class="date-header">Today</div>
+      
+      <div class="transaction-row" data-id="1">
+        <div class="category-icon expense">🍔</div>
+        <div class="transaction-info">
+          <div class="category-name">Food <span class="subcategory">- Groceries</span></div>
+          <div class="notes">Weekly groceries at Costco</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$85.00</div>
+          <div class="account-badge">Cash</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag food">food</span>
+          <span class="tag groceries">groceries</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="2">
+        <div class="category-icon expense">🚗</div>
+        <div class="transaction-info">
+          <div class="category-name">Transportation <span class="subcategory">- Gas</span></div>
+          <div class="notes">Shell gas station - 45.2 gallons</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$62.40</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E8EAF6;color:#3F51B5;">car</span>
+          <span class="tag" style="background:#FFF3E0;color:#E65100;">gas</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="3">
+        <div class="category-icon income">💰</div>
+        <div class="transaction-info">
+          <div class="category-name">Salary</div>
+          <div class="notes">Monthly salary deposit - Acme Corp</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount income">+$3,000.00</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag income">income</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="4">
+        <div class="category-icon transfer">🔄</div>
+        <div class="transaction-info">
+          <div class="category-name">Transfer</div>
+          <div class="notes">To savings account</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount transfer">-$500.00</div>
+          <div class="account-badge">Checking</div>
+          <div class="transfer-dest">
+            <span class="material-icons">arrow_forward</span>
+            <span>Savings</span>
+          </div>
+        </div>
+        <div class="tags-section">
+          <span class="tag transfer-tag">transfer</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yesterday -->
+    <div class="date-group">
+      <div class="date-header">Yesterday</div>
+      
+      <div class="transaction-row" data-id="5">
+        <div class="category-icon expense">☕</div>
+        <div class="transaction-info">
+          <div class="category-name">Food <span class="subcategory">- Coffee</span></div>
+          <div class="notes">Morning coffee at Starbucks</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$6.25</div>
+          <div class="account-badge">Credit Card</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag food">coffee</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="6">
+        <div class="category-icon expense">🛒</div>
+        <div class="transaction-info">
+          <div class="category-name">Shopping <span class="subcategory">- Clothing</span></div>
+          <div class="notes">New running shoes - Nike outlet</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$89.99</div>
+          <div class="account-badge">Credit Card</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#FCE4EC;color:#C2185B;">shopping</span>
+          <span class="tag" style="background:#E8EAF6;color:#3F51B5;">shoes</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="7">
+        <div class="category-icon expense">📺</div>
+        <div class="transaction-info">
+          <div class="category-name">Entertainment <span class="subcategory">- Streaming</span></div>
+          <div class="notes">Netflix monthly subscription</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$15.99</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E1BEE7;color:#7B1FA2;">entertainment</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- May 18, 2026 -->
+    <div class="date-group">
+      <div class="date-header">May 18, 2026</div>
+      
+      <div class="transaction-row" data-id="8">
+        <div class="category-icon expense">📱</div>
+        <div class="transaction-info">
+          <div class="category-name">Bills <span class="subcategory">- Utilities</span></div>
+          <div class="notes">Electric bill payment - City Power Co</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$124.50</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#FFF8E1;color:#FF8F00;">bills</span>
+          <span class="tag" style="background:#E3F2FD;color:#1976D2;">utilities</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="9">
+        <div class="category-icon income">🎁</div>
+        <div class="transaction-info">
+          <div class="category-name">Gift</div>
+          <div class="notes">Birthday gift from Sarah</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount income">+$50.00</div>
+          <div class="account-badge">Cash</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E8F5E9;color:#388E3C;">gift</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="10">
+        <div class="category-icon transfer">🔄</div>
+        <div class="transaction-info">
+          <div class="category-name">Transfer</div>
+          <div class="notes">Emergency fund allocation</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount transfer">-$200.00</div>
+          <div class="account-badge">Checking</div>
+          <div class="transfer-dest">
+            <span class="material-icons">arrow_forward</span>
+            <span>Savings</span>
+          </div>
+        </div>
+        <div class="tags-section">
+          <span class="tag transfer-tag">transfer</span>
+          <span class="tag" style="background:#E8F5E9;color:#388E3C;">savings</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- May 17, 2026 -->
+    <div class="date-group">
+      <div class="date-header">May 17, 2026</div>
+      
+      <div class="transaction-row" data-id="11">
+        <div class="category-icon expense">🍽️</div>
+        <div class="transaction-info">
+          <div class="category-name">Food <span class="subcategory">- Restaurants</span></div>
+          <div class="notes">Dinner at Italian Bistro with friends</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$67.50</div>
+          <div class="account-badge">Credit Card</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag food">dining</span>
+          <span class="tag" style="background:#FCE4EC;color:#C2185B;">social</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="12">
+        <div class="category-icon expense">💊</div>
+        <div class="transaction-info">
+          <div class="category-name">Health <span class="subcategory">- Pharmacy</span></div>
+          <div class="notes">Prescription refill - CVS Pharmacy</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$28.00</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E8F5E9;color:#388E3C;">health</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="13">
+        <div class="category-icon income">💵</div>
+        <div class="transaction-info">
+          <div class="category-name">Freelance</div>
+          <div class="notes">Website design project - TechStart Inc</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount income">+$850.00</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag income">income</span>
+          <span class="tag" style="background:#E8EAF6;color:#3F51B5;">freelance</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="14">
+        <div class="category-icon expense">🏠</div>
+        <div class="transaction-info">
+          <div class="category-name">Bills <span class="subcategory">- Rent</span></div>
+          <div class="notes">Monthly rent payment - May 2026</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$1,800.00</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#FFF8E1;color:#FF8F00;">rent</span>
+          <span class="tag" style="background:#ECEFF1;color:#546E7A;">housing</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="15">
+        <div class="category-icon transfer">🔄</div>
+        <div class="transaction-info">
+          <div class="category-name">Transfer</div>
+          <div class="notes">Credit card payment</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount transfer">-$450.00</div>
+          <div class="account-badge">Checking</div>
+          <div class="transfer-dest">
+            <span class="material-icons">arrow_forward</span>
+            <span>Credit Card</span>
+          </div>
+        </div>
+        <div class="tags-section">
+          <span class="tag transfer-tag">transfer</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- May 16, 2026 -->
+    <div class="date-group">
+      <div class="date-header">May 16, 2026</div>
+      
+      <div class="transaction-row" data-id="16">
+        <div class="category-icon expense">⛽</div>
+        <div class="transaction-info">
+          <div class="category-name">Transportation <span class="subcategory">- Parking</span></div>
+          <div class="notes">Downtown parking - 4 hours</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$18.00</div>
+          <div class="account-badge">Credit Card</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E8EAF6;color:#3F51B5;">car</span>
+          <span class="tag" style="background:#FFF3E0;color:#E65100;">parking</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="17">
+        <div class="category-icon expense">🎮</div>
+        <div class="transaction-info">
+          <div class="category-name">Entertainment <span class="subcategory">- Gaming</span></div>
+          <div class="notes">New game release - Steam</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$59.99</div>
+          <div class="account-badge">Credit Card</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E1BEE7;color:#7B1FA2;">gaming</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="18">
+        <div class="category-icon income">📈</div>
+        <div class="transaction-info">
+          <div class="category-name">Investment <span class="subcategory">- Dividends</span></div>
+          <div class="notes">Quarterly dividend payment - VTSAX</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount income">+$124.35</div>
+          <div class="account-badge">Brokerage</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E3F2FD;color:#1976D2;">investment</span>
+          <span class="tag income">income</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="19">
+        <div class="category-icon expense">🏋️</div>
+        <div class="transaction-info">
+          <div class="category-name">Health <span class="subcategory">- Gym</span></div>
+          <div class="notes">Monthly gym membership - FitLife</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$49.99</div>
+          <div class="account-badge">Checking</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#E8F5E9;color:#388E3C;">health</span>
+          <span class="tag" style="background:#ECEFF1;color:#546E7A;">fitness</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="transaction-row" data-id="20">
+        <div class="category-icon expense">🛍️</div>
+        <div class="transaction-info">
+          <div class="category-name">Shopping <span class="subcategory">- Online</span></div>
+          <div class="notes">Office supplies - Amazon</div>
+        </div>
+        <div class="amount-section">
+          <div class="amount expense">-$34.97</div>
+          <div class="account-badge">Credit Card</div>
+        </div>
+        <div class="tags-section">
+          <span class="tag" style="background:#FCE4EC;color:#C2185B;">shopping</span>
+        </div>
+        <div class="row-actions">
+          <button class="action-icon-btn" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="action-icon-btn delete" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <div class="pagination-info">Showing 1-20 of 156 transactions</div>
+    <div class="pagination-controls">
+      <button class="page-btn nav" disabled>
+        <span class="material-icons">chevron_left</span>
+      </button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <button class="page-btn">4</button>
+      <button class="page-btn">5</button>
+      <span style="padding: 0 4px; color: var(--md-text-secondary);">...</span>
+      <button class="page-btn">8</button>
+      <button class="page-btn nav">
+        <span class="material-icons">chevron_right</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Context Menu for Mobile -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item">
+      <span class="material-icons">visibility</span>
+      View Details
+    </div>
+    <div class="context-menu-item">
+      <span class="material-icons">edit</span>
+      Edit
+    </div>
+    <div class="context-menu-item">
+      <span class="material-icons">content_copy</span>
+      Duplicate
+    </div>
+    <div class="context-menu-item danger">
+      <span class="material-icons">delete</span>
+      Delete
+    </div>
+  </div>
+
+  <script>
+    // Dropdown functionality
+    const accountBtn = document.getElementById('accountFilterBtn');
+    const accountDropdown = document.getElementById('accountDropdown');
+    const categoryBtn = document.getElementById('categoryFilterBtn');
+    const categoryDropdown = document.getElementById('categoryDropdown');
+    const overlay = document.getElementById('dropdownOverlay');
+
+    function closeAllDropdowns() {
+      accountDropdown.classList.remove('show');
+      categoryDropdown.classList.remove('show');
+      accountBtn.classList.remove('active');
+      categoryBtn.classList.remove('active');
+      overlay.classList.remove('show');
+    }
+
+    accountBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = accountDropdown.classList.contains('show');
+      closeAllDropdowns();
+      if (!isOpen) {
+        accountDropdown.classList.add('show');
+        accountBtn.classList.add('active');
+        overlay.classList.add('show');
+      }
+    });
+
+    categoryBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = categoryDropdown.classList.contains('show');
+      closeAllDropdowns();
+      if (!isOpen) {
+        categoryDropdown.classList.add('show');
+        categoryBtn.classList.add('active');
+        overlay.classList.add('show');
+      }
+    });
+
+    overlay.addEventListener('click', closeAllDropdowns);
+
+    // Handle dropdown item selection
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        const dropdown = item.closest('.dropdown-menu');
+        const btn = dropdown.previousElementSibling;
+        
+        // Update selection
+        dropdown.querySelectorAll('.dropdown-item').forEach(i => {
+          i.classList.remove('selected');
+          i.querySelector('.check-icon').style.visibility = 'hidden';
+        });
+        item.classList.add('selected');
+        item.querySelector('.check-icon').style.visibility = 'visible';
+        
+        // Update button text
+        btn.querySelector('span:nth-child(2)').textContent = item.textContent.trim();
+        
+        closeAllDropdowns();
+      });
+    });
+
+    // Type tabs
+    document.querySelectorAll('.type-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+
+    // Transaction row click
+    document.querySelectorAll('.transaction-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        // Don't navigate if clicking action buttons
+        if (e.target.closest('.row-actions')) return;
+        console.log('Navigate to transaction:', row.dataset.id);
+        // Would navigate to transaction detail page
+      });
+
+      // Long press for mobile context menu
+      let pressTimer;
+      row.addEventListener('touchstart', (e) => {
+        pressTimer = setTimeout(() => {
+          showContextMenu(e.touches[0]);
+        }, 500);
+      });
+
+      row.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+      });
+
+      row.addEventListener('touchmove', () => {
+        clearTimeout(pressTimer);
+      });
+    });
+
+    // Context menu
+    const contextMenu = document.getElementById('contextMenu');
+
+    function showContextMenu(touchPoint) {
+      contextMenu.style.left = touchPoint.clientX + 'px';
+      contextMenu.style.top = touchPoint.clientY + 'px';
+      contextMenu.classList.add('show');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.context-menu')) {
+        contextMenu.classList.remove('show');
+      }
+    });
+
+    // Action button clicks
+    document.querySelectorAll('.action-icon-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.querySelector('.material-icons').textContent;
+        const row = btn.closest('.transaction-row');
+        const id = row.dataset.id;
+        
+        if (action === 'edit') {
+          console.log('Edit transaction:', id);
+        } else if (action === 'delete') {
+          console.log('Delete transaction:', id);
+        }
+      });
+    });
+
+    // Pagination
+    document.querySelectorAll('.page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        document.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Update nav button states
+        const activePage = parseInt(btn.textContent) || 1;
+        document.querySelector('.page-btn.nav:first-child').disabled = activePage === 1;
+        document.querySelector('.page-btn.nav:last-child').disabled = activePage === 8;
+      });
+    });
+  </script>
+</body>
+</html>
