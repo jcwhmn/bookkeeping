@@ -1,4 +1,4 @@
-# ADR-003: DTO Mapping - MapStruct Plus
+# ADR-003: DTO Mapping - MapStruct-Ext
 
 ## Status
 ✅ Accepted (with TODO)
@@ -7,13 +7,13 @@
 
 We need to convert between Entity and DTO objects for REST API. Options:
 1. MapStruct - requires writing mapper interfaces for each conversion
-2. mapstruct_plus - annotation-based, less boilerplate
+2. MapStruct-Ext - annotation-based, less boilerplate (our custom implementation)
 3. Manual mapping - verbose, error-prone
 4. Other (BeanUtils, ModelMapper) - reflection overhead
 
 ## Decision
 
-Use **mapstruct_plus** as external dependency instead of MapStruct mapper interfaces.
+Use **mapstruct-ext** as external dependency instead of MapStruct mapper interfaces.
 
 ## Usage Example
 
@@ -58,7 +58,7 @@ public class TransactionDto {
 ## TODO
 
 - [ ] Review if String-based DTO fields are acceptable long-term
-- [ ] Consider creating converter for typed DTOs if needed
+- [ ] Consider improving mapstruct-ext to support typed DTO fields (Long, LocalDateTime)
 - [ ] Document DTO conversion patterns
 
 ## Metadata
@@ -66,4 +66,4 @@ public class TransactionDto {
 - **Date**: 2026-05-19
 - **Author**: System
 - **Status**: Accepted
-- **External Dependency**: https://github.com/jcwhmn/mapstruct-plus
+- **External Dependency**: https://github.com/jcwhmn/mapstruct-ext
