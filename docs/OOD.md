@@ -829,17 +829,17 @@ package "Backend (Spring Boot 4)" {
 }
 
 database "PostgreSQL 17" {
-    datastore "users"
-    datastore "accounts"
-    datastore "categories"
-    datastore "transactions"
-    datastore "tags"
-    datastore "budgets"
-    datastore "flyway_schema_history"
+    [users]
+    [accounts]
+    [categories]
+    [transactions]
+    [tags]
+    [budgets]
+    [flyway_schema_history]
 }
 
 database "Docker Container" {
-    datastore "PostgreSQL Container"
+    [PostgreSQL Container]
 }
 
 package "External" {
@@ -854,17 +854,6 @@ package "External" {
 [Security (JWT)] --> [Services]
 [Flyway Migrations] --> [PostgreSQL 17] : migrate on boot
 
-note bottom of database "PostgreSQL 17"
-  3 databases
-  bookkeeping (prod)
-  bookkeeping_dev
-  bookkeeping_test
-end note
-
-note bottom of database "Docker Container"
-  Start: scripts/start-db.sh
-  Scripts auto-create 3 databases
-end note
 
 @enduml
 ```
