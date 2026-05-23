@@ -39,7 +39,7 @@ class User {
 }
 BaseEntity <|-- User
 
-' === CORE — ACCOUNT ===
+' === CORE - ACCOUNT ===
 class Account {
     +String name
     +AccountType accountType
@@ -60,7 +60,7 @@ enum AccountType {
 }
 Account --> AccountType : accountType
 
-' === CORE — CATEGORY ===
+' === CORE - CATEGORY ===
 class Category {
     +String name
     +CategoryType categoryType
@@ -76,7 +76,7 @@ enum CategoryType {
 }
 Category --> CategoryType : categoryType
 
-' === CORE — TAG ===
+' === CORE - TAG ===
 class Tag {
     +Long id
     +Long userId
@@ -87,7 +87,7 @@ class Tag {
     +Boolean deleted
 }
 
-' === CORE — BUDGET ===
+' === CORE - BUDGET ===
 class Budget {
     +Long id
     +Long userId
@@ -99,7 +99,7 @@ class Budget {
     +Long updatedTime
 }
 
-' === CORE — TRANSACTION ===
+' === CORE - TRANSACTION ===
 class Transaction {
     +Integer transactionType
     +Long accountId
@@ -133,8 +133,8 @@ Account "1" --> "n" Transaction : records
 Category "1" --> "n" Transaction : categorizes
 Category "1" --> "n" Budget : budgets
 
-' Transfer link
-Transaction "4\nTRANSFER_OUT" --o{ Transaction "5\nTRANSFER_IN" : relatedId
+' Transfer link -- TRANSFER_OUT (type=4) and TRANSFER_IN (type=5) are linked by relatedId
+Transaction }o--o{ Transaction : relatedId
 
 @enduml
 ```
@@ -250,7 +250,7 @@ TransactionService ..> TransactionMapper
 
 ---
 
-## 3. Service Layer — Transaction Flow (Sequence Diagram)
+## 3. Transaction Create Flow (Sequence Diagram)
 
 ```plantuml
 @startuml
@@ -259,42 +259,41 @@ TransactionService ..> TransactionMapper
 title Transaction Create Flow
 
 actor User
-participant "AccountController" as AC
 participant "TransactionController" as TC
 participant "TransactionService" as TS
 participant "AccountService" as AS
 participant "TransactionRepository" as TR
 participant "AccountRepository" as AR
 
-User -> TC : POST /transactions (create)
-TC -> TS : createTransaction(req)
+User -> TC : POST /api/v1/transactions (createTransaction)
+TC -> TS : createTransaction(request)
 
-alt Transfer (type = 4)
-    TS -> AS : updateBalance(from, -amount)
+alt Transfer (type = 4, destinationAccountId set)
+    TS -> AS : updateBalance(fromAccountId, -amount)
     AS -> AR : findById
     AR --> AS : Account
-    AS -> AR : save(updatedBalance)
+    AS -> AR : save(toBuilder().balance(newBalance).build())
     AS --> TS : Account
 
-    TS -> TR : save(TRANSFER_OUT)
+    TS -> TR : save(TRANSFER_OUT record)
     TR --> TS : tx1
 
-    TS -> TR : save(TRANSFER_IN, relatedId=tx1.id)
+    TS -> TR : save(TRANSFER_IN record, relatedId=tx1.id)
     TR --> TS : tx2
 
     TS -> TR : save(tx1, relatedId=tx2.id)
-    TR --> TS : tx1
+    TR --> TS : tx1 (updated)
 
 else Normal Transaction
-    alt Income / Modify Balance (type 1, 2)
-        TS -> AS : updateBalance(account, +amount)
+    alt Income / Modify Balance (type 1 or 2)
+        TS -> AS : updateBalance(accountId, +amount)
     else Expense (type 3)
-        TS -> AS : updateBalance(account, -amount)
+        TS -> AS : updateBalance(accountId, -amount)
     end
 
     AS -> AR : findById
     AR --> AS : Account
-    AS -> AR : save(updatedBalance)
+    AS -> AR : save(toBuilder().balance(newBalance).build())
     AS --> TS : Account
 
     TS -> TR : save(transaction)
@@ -302,14 +301,14 @@ else Normal Transaction
 end
 
 TS --> TC : TransactionDto
-TC --> User : 200 OK
+TC --> User : 200 OK ApiResponse
 
 @enduml
 ```
 
 ---
 
-## 4. Authentication Flow (Sequence Diagram)
+## 4. Login & Authenticated Request (Sequence Diagram)
 
 ```plantuml
 @startuml
@@ -325,25 +324,25 @@ participant "JwtTokenProvider" as JTP
 participant "JwtAuthenticationFilter" as JAF
 participant "SecurityConfig" as SC
 
-'=== Login ===
-Client -> AC : POST /auth/login {username, password}
-AC -> AS : login(req)
+' Login flow
+Client -> AC : POST /api/v1/auth/login {username, password}
+AC -> AS : login(request)
 AS -> UR : findByUsername
 UR --> AS : User
-AS -> AS : verify password (MD5)
+AS -> AS : verify password (MD5 hash)
 AS -> JTP : generateToken(userId, username)
 JTP --> AS : jwtToken
 AS --> AC : LoginResponse{jwtToken, user}
 AC --> Client : 200 OK {token, user}
 
-'=== Authenticated Request ===
-Client -> JAF : Request + Bearer token
-JAF -> JTP : validateToken
+' Authenticated request flow
+Client -> JAF : Request + Authorization: Bearer <token>
+JAF -> JTP : validateToken(token)
 alt Token valid
     JTP --> JAF : userId
-    JAF -> SC : SecurityContext.setAuthentication
-    JAF -> SC : filterChain continue
-else Token invalid/expired
+    JAF -> SC : SecurityContext.setAuthentication(userId)
+    JAF -> SC : filterChain proceeds
+else Token invalid / expired
     JAF --> Client : 401 Unauthorized
 end
 
@@ -352,7 +351,7 @@ end
 
 ---
 
-## 5. Sequence Diagram — Delete Transaction (with Transfer Revert)
+## 5. Delete Transaction with Balance Revert (Sequence Diagram)
 
 ```plantuml
 @startuml
@@ -367,15 +366,15 @@ participant "AccountService" as AS
 participant "TransactionRepository" as TR
 participant "AccountRepository" as AR
 
-User -> TC : DELETE /transactions/{id}
+User -> TC : DELETE /api/v1/transactions/{id}
 TC -> TS : deleteTransaction(id)
 TS -> TR : findByIdAndUserId(id, userId)
 TR --> TS : Transaction
 
-alt Has relatedId (Transfer pair)
+alt Has relatedId (part of transfer pair)
     TS -> TR : findById(relatedId)
     TR --> TS : relatedTx
-    TS -> AS : updateBalance(relatedTx.accountId, -change)
+    TS -> AS : updateBalance(relatedTx.accountId, -calculateBalanceChange(relatedTx))
     AS -> AR : findById
     AR --> AS : Account
     AS -> AR : save(revertedBalance)
@@ -383,7 +382,7 @@ alt Has relatedId (Transfer pair)
     TS -> TR : delete(relatedTx)
 end
 
-TS -> AS : updateBalance(oldAccountId, -change)
+TS -> AS : updateBalance(oldAccountId, -calculateBalanceChange(existingTx))
 AS -> AR : findById
 AR --> AS : Account
 AS -> AR : save(revertedBalance)
@@ -398,7 +397,7 @@ TC --> User : 204 No Content
 
 ---
 
-## 6. Use Case Diagram — System Functions
+## 6. Use Case Diagram
 
 ```plantuml
 @startuml
@@ -429,11 +428,11 @@ package "Transaction Management" {
     usecase "UC10: Transfer Between Accounts" as UC10
     usecase "UC11: Edit Transaction" as UC11
     usecase "UC12: Delete Transaction" as UC12
-    usecase "UC13: Search/Filter Transactions" as UC13
+    usecase "UC13: Search and Filter" as UC13
     usecase "UC14: View Monthly Statistics" as UC14
 }
 
-package "Tag & Budget" {
+package "Tag and Budget" {
     usecase "UC15: Manage Tags" as UC15
     usecase "UC16: Set Budget" as UC16
     usecase "UC17: View Budget vs Actual" as UC17
@@ -448,9 +447,8 @@ package "Reporting" {
 package "Authentication" {
     usecase "UC21: Register" as UC21
     usecase "UC22: Login" as UC22
-    usecase "UC23: Logout" as UC23
-    usecase "UC24: View Profile" as UC24
-    usecase "UC25: Update Profile" as UC25
+    usecase "UC23: View Profile" as UC23
+    usecase "UC24: Update Profile" as UC24
 }
 
 User --> UC1
@@ -475,8 +473,8 @@ User --> UC19
 User --> UC20
 User --> UC21
 User --> UC22
+User --> UC23
 User --> UC24
-User --> UC25
 
 @enduml
 ```
@@ -491,17 +489,17 @@ User --> UC25
 
 title Entity Relationship Diagram
 
-' Tables
+' users table
 entity "users" as users {
     * id : BIGSERIAL PK
-    * username : VARCHAR(32) UNIQUE
-    * email : VARCHAR(100) UNIQUE
-    * password : VARCHAR(100)
-    * salt : VARCHAR(10)
+    * username : VARCHAR(32) UNIQUE NOT NULL
+    * email : VARCHAR(100) UNIQUE NOT NULL
+    * password : VARCHAR(100) NOT NULL
+    * salt : VARCHAR(10) NOT NULL
     --
     nickname : VARCHAR(64)
     default_currency : VARCHAR(3)
-    default_account_id : BIGINT FK
+    default_account_id : BIGINT
     language : VARCHAR(10)
     email_verified : BOOLEAN
     disabled : BOOLEAN
@@ -509,13 +507,14 @@ entity "users" as users {
     * updated_at : BIGINT
 }
 
+' accounts table
 entity "accounts" as accounts {
     * id : BIGSERIAL PK
-    * name : VARCHAR(64)
-    * account_type : VARCHAR(20)
-    * currency : VARCHAR(3)
-    * balance : BIGINT
-    * user_id : BIGINT FK
+    * name : VARCHAR(64) NOT NULL
+    * account_type : VARCHAR(20) NOT NULL
+    * currency : VARCHAR(3) NOT NULL
+    * balance : BIGINT NOT NULL
+    * user_id : BIGINT NOT NULL FK
     --
     description : VARCHAR(255)
     deleted : BOOLEAN
@@ -523,52 +522,56 @@ entity "accounts" as accounts {
     * updated_at : BIGINT
 }
 
+' categories table
 entity "categories" as categories {
     * id : BIGSERIAL PK
-    * name : VARCHAR(64)
-    * category_type : VARCHAR(10)
-    * user_id : BIGINT FK
+    * name : VARCHAR(64) NOT NULL
+    * category_type : VARCHAR(10) NOT NULL
+    * user_id : BIGINT NOT NULL FK
     --
-    parent_id : BIGINT FK
+    parent_id : BIGINT
     sort_order : INT
     * created_at : BIGINT
     * updated_at : BIGINT
 }
 
+' transactions table
 entity "transactions" as transactions {
     * id : BIGSERIAL PK
-    * transaction_type : INT
-    * account_id : BIGINT FK
+    * transaction_type : INT NOT NULL
+    * account_id : BIGINT NOT NULL FK
     category_id : BIGINT FK
-    * amount : BIGINT
+    * amount : BIGINT NOT NULL
     description : VARCHAR(255)
-    * transaction_time : BIGINT
+    * transaction_time : BIGINT NOT NULL
     related_id : BIGINT FK
-    * user_id : BIGINT FK
+    * user_id : BIGINT NOT NULL FK
     --
     tag_ids : TEXT
     * created_at : BIGINT
     * updated_at : BIGINT
 }
 
+' tags table
 entity "tags" as tags {
     * id : BIGSERIAL PK
-    * user_id : BIGINT FK
-    * name : VARCHAR
+    * user_id : BIGINT NOT NULL FK
+    * name : VARCHAR NOT NULL
     color : VARCHAR(7)
-    * created_unix_time : BIGINT
+    * created_unix_time : BIGINT NOT NULL
     updated_unix_time : BIGINT
     deleted : BOOLEAN
 }
 
+' budgets table
 entity "budgets" as budgets {
     * id : BIGSERIAL PK
-    * user_id : BIGINT FK
-    * category_id : BIGINT FK
-    * amount : BIGINT
-    * year : INT
-    * month : INT
-    * created_unix_time : BIGINT
+    * user_id : BIGINT NOT NULL FK
+    * category_id : BIGINT NOT NULL FK
+    * amount : BIGINT NOT NULL
+    * year : INT NOT NULL
+    * month : INT NOT NULL
+    * created_unix_time : BIGINT NOT NULL
     updated_unix_time : BIGINT
 }
 
@@ -583,7 +586,8 @@ accounts ||--o{ transactions : records
 categories ||--o{ transactions : categorizes
 categories ||--o{ budgets : budgets
 
-transactions }o--|| transactions : transfer pair\n(related_id)
+' Transfer pair self-reference
+transactions }o--|| transactions : related_id (transfer pair)
 
 users ||--o| accounts : default account
 
@@ -592,171 +596,148 @@ users ||--o| accounts : default account
 
 ---
 
-## 8. Mind Map — System Functionality Overview
+## 8. System Mind Map
 
 ```plantuml
 @startuml
 !theme plain
 
-title Bookkeeping System — Functionality Mind Map
+title Bookkeeping System - Functionality Mind Map
 
-center footer Generated from OOD analysis. PlantUML mindmap support varies by renderer.
-
-legend left
-| **Color Legend** |
-| <back:#E8F5E9>Green = Module/Feature</back> |
-| <back:#E3F2FD>Blue = Sub-feature</back> |
-| <back:#FFF3E0>Orange = Data Entity</back> |
-| <back:#FCE4EC>Pink = API Endpoint</back> |
-endlegend
-
-leaf root {
-  Bookkeeping System
+' Core Modules
+rectangle "Account Management" #LightGreen {
+  card "Account entity\n(name, balance, currency)"
+  card "AccountService"
+  card "AccountRepository"
+  card "AccountController"
+  card "AccountDto + @MapperAuto"
+  note bottom #White
+    CRUD + soft delete
+    Balance auto-update on tx
+  end note
 }
 
-branch {root} core {
-  Account Management
-  leaf {core} accounts {
-    **Entity:** Account
-    **Service:** AccountService
-    **Repository:** AccountRepository
-    leaf CRUD {
-      Create Account
-      Update Account
-      Soft Delete
-      List Accounts
-    }
-    leaf Balance {
-      Initial Balance
-      Auto-Update on Tx
-    }
-  }
-
-  Category Management
-  leaf {core} categories {
-    **Entity:** Category
-    **Service:** CategoryService
-    **Repository:** CategoryRepository
-    leaf CRUD {
-      Create Category
-      Delete Category
-      List by Type
-    }
-    leaf Hierarchy {
-      Parent Category
-      Sort Order
-    }
-  }
-
-  Transaction Management
-  leaf {core} transactions {
-    **Entity:** Transaction
-    **Service:** TransactionService
-    **Repository:** TransactionRepository
-    leaf Types {
-      INCOME (+amount)
-      EXPENSE (-amount)
-      TRANSFER (pair)
-      MODIFY_BALANCE
-    }
-    leaf Features {
-      Create Transaction
-      Edit Transaction
-      Delete Transaction
-      Search & Filter
-      Month Navigation
-    }
-  }
-
-  Tag Management
-  leaf {core} tags {
-    **Entity:** Tag
-    **Service:** TagService
-    leaf CRUD {
-      Create Tag
-      Update Tag
-      Delete Tag
-      Tag Colors
-    }
-  }
-
-  Budget Management
-  leaf {core} budgets {
-    **Entity:** Budget
-    **Service:** BudgetService
-    leaf Set Budget (amount/month/category)
-    leaf Track Spent vs Budget
-    leaf Alerts (over budget)
-  }
-
-  Dashboard & Reporting
-  leaf {core} dashboard {
-    **Controller:** DashboardController
-    leaf KPI Cards {
-      Total Balance
-      Monthly Income
-      Monthly Expense
-      Net Change
-    }
-    leaf Statistics {
-      Category Breakdown
-      Income vs Expense
-      Trend Charts
-    }
-    leaf Reports {
-      Monthly Summary
-      Category Report
-      Budget vs Actual
-    }
-  }
+rectangle "Category Management" #LightGreen {
+  card "Category entity\n(name, categoryType, parentId)"
+  card "CategoryService"
+  card "CategoryRepository"
+  card "CategoryController"
+  card "CategoryDto + @MapperAuto"
+  note bottom #White
+    INCOME / EXPENSE types
+    Optional parent hierarchy
+  end note
 }
 
-branch {root} supporting {
-  Authentication & User
-  leaf {supporting} auth {
-    **Entities:** User, Session
-    **Services:** AuthService, UserService
-    leaf Login (JWT)
-    leaf Register
-    leaf Profile Update
-    leaf Password Hash (MD5+salt)
-  }
-
-  Security
-  leaf {supporting} security {
-    **Components:** JwtTokenProvider, JwtFilter
-    leaf Stateless JWT
-    leaf CORS Config
-    leaf Public/Protected Routes
-  }
-
-  Infrastructure
-  leaf {supporting} infra {
-    leaf DataInitializer (Seed Data)
-    leaf GlobalExceptionHandler
-    leaf ResultCode (Error Codes)
-    leaf OpenAPI / Swagger
-  }
+rectangle "Transaction Management" #LightGreen {
+  card "Transaction entity"
+  card "TransactionService"
+  card "TransactionRepository"
+  card "TransactionController"
+  card "StatisticsDto"
+  note bottom #White
+    5 types: INCOME, EXPENSE,\nTRANSFER_OUT, TRANSFER_IN, MODIFY_BALANCE
+    Auto balance update
+    relatedId for transfers
+  end note
 }
 
-branch {root} data {
-  Amount Storage
-  leaf amount {
-    BIGINT (cents/fen)
-    No floating point
-  }
+rectangle "Tag Management" #LightGreen {
+  card "Tag entity\n(name, color)"
+  card "TagService"
+  card "TagRepository"
+  card "TagController"
+  card "TagDto + @MapperAuto"
+  note bottom #White
+    CRUD + soft delete
+    Tag colors (hex)
+  end note
+}
 
-  Time Storage
-  leaf time {
-    Unix Epoch (BIGINT seconds)
-    JPA @PrePersist/@PreUpdate
-  }
+rectangle "Budget Management" #LightGreen {
+  card "Budget entity\n(amount, year, month)"
+  card "BudgetService"
+  card "BudgetRepository"
+  card "BudgetController"
+  card "BudgetDto (calculated spent)"
+  note bottom #White
+    Per category / month
+    Spent vs budget tracking
+  end note
+}
 
-  Soft Delete
-  leaf soft-delete {
-    deleted flag
-    updatedAt timestamp
-  }
+rectangle "Dashboard & Reporting" #LightGreen {
+  card "DashboardController"
+  card "Statistics (by category)"
+  card "Charts (ECharts)"
+  card "Reports page"
+  card "CSV Export"
+  note bottom #White
+    KPI: income, expense, net
+    Monthly trend analysis
+  end note
+}
+
+' Supporting
+rectangle "Authentication" #LightYellow {
+  card "User entity"
+  card "AuthService"
+  card "AuthController"
+  card "Login / Register / JWT"
+  card "UserService"
+  note bottom #White
+    MD5 + salt password hash
+    JWT stateless auth
+  end note
+}
+
+rectangle "Security" #LightYellow {
+  card "JwtTokenProvider\n(token gen/validate)"
+  card "JwtAuthenticationFilter"
+  card "SecurityUtils\n(requireCurrentUser)"
+  card "SecurityConfig\n(CORS, routes)"
+  note bottom #White
+    Public: /auth/*, /health
+    Protected: /api/v1/*
+  end note
+}
+
+rectangle "Infrastructure" #LightYellow {
+  card "DataInitializer\n(seed demo data)"
+  card "GlobalExceptionHandler"
+  card "ResultCode (error codes)"
+  card "OpenApiConfig (Swagger)"
+  card "Flyway migrations"
+  note bottom #White
+    Flyway: V1-V5 migrations
+    Demo user: demo/demo123
+  end note
+}
+
+' Common
+rectangle "Common" #LightGray {
+  card "BaseEntity (id, createdAt, updatedAt)"
+  card "Auditable interface"
+  card "ApiResponse<T>"
+  card "AccountType enum"
+  card "CategoryType enum"
+  card "TransactionType enum"
+  note bottom #White
+    @Builder(toBuilder=true)
+    @NoArgsConstructor(PROTECTED)
+    No setters in production code
+  end note
+}
+
+' Key Design Rules
+rectangle "Key Design Rules" #Lavender {
+  card "Amount: BIGINT cents (no float)"
+  card "Time: Unix epoch BIGINT sec"
+  card "Soft delete: deleted flag"
+  card "Transfer: 2 records + relatedId"
+  card "Response: ApiResponse<T>"
+  card "Builder pattern (no setters)"
+  card "MapStructPlus @MapperAuto on DTO"
 }
 
 @enduml
@@ -764,7 +745,7 @@ branch {root} data {
 
 ---
 
-## 9. State Machine — Transaction Lifecycle
+## 9. Transaction State Machine
 
 ```plantuml
 @startuml
@@ -774,26 +755,24 @@ title Transaction State Machine
 
 [*] --> Draft : createTransaction()
 
-Draft --> Income : type = 2\namount > 0
-Draft --> Expense : type = 3\namount > 0
-Draft --> TransferOut : type = 4\n(source set)
+Draft --> Income : type = 2 (INCOME)
+Draft --> Expense : type = 3 (EXPENSE)
+Draft --> TransferOut : type = 4 (TRANSFER_OUT)
 
-TransferOut --> TransferIn : destination\naccount set
+TransferOut --> TransferIn : destinationAccount\nset
 TransferIn --> [*] : saved
 
 Income --> [*] : saved
 Expense --> [*] : saved
 
 Draft --> Editing : PUT /transactions/{id}
-
 Editing --> [*] : updated
 
-Draft --> Deleting : DELETE
-
-Deleting --> [*] : deleted
+Draft --> Deleting : DELETE /transactions/{id}
+Deleting --> [*] : deleted\n(balance reverted)
 
 note right of Draft
-  Balance not yet changed
+  Account balance not yet changed
 end note
 
 note right of Income
@@ -805,15 +784,15 @@ note right of Expense
 end note
 
 note right of TransferOut
-  Source balance -= amount
+  Source account -= amount
 end note
 
 note right of TransferIn
-  Dest balance += amount
+  Dest account += amount\nrelatedId links the pair
 end note
 
 note right of Deleting
-  Balance reverted before delete
+  Revert balance change\nthen delete record
 end note
 
 @enduml
@@ -821,7 +800,7 @@ end note
 
 ---
 
-## 10. Deployment / Infrastructure View (Component Diagram)
+## 10. Deployment Overview
 
 ```plantuml
 @startuml
@@ -829,48 +808,49 @@ end note
 
 title Deployment Overview
 
-node "Frontend (Nuxt 4)" {
-    component "Vue 3 Pages"
-    component "Vuetify 3 UI"
+node "Frontend (Nuxt 4 + Vue 3)" {
+    component "Vue Pages"
+    component "Vuetify 3"
     component "Pinia Store"
     component "ECharts"
-    component "i18n"
+    component "i18n locales"
 }
 
 node "Backend (Spring Boot 4)" {
     component "Controllers" as C
-    component "Services" as S
-    component "Repositories" as R
-    component "Security (JWT)" as SEC
-    component "Flyway Migrations" as FLY
-
-    database "PostgreSQL 17" as PG {
-        table "users"
-        table "accounts"
-        table "categories"
-        table "transactions"
-        table "tags"
-        table "budgets"
-    }
+    component "Services (@Service)" as S
+    component "Repositories (@Repository)" as R
+    component "Security (JWT Filter Chain)" as SEC
+    component "Flyway (migrations V1-V5)" as FLY
 }
 
-node "Docker" {
-    database "PostgreSQL Container" as PC
+node "PostgreSQL 17" as PG {
+    table "users"
+    table "accounts"
+    table "categories"
+    table "transactions"
+    table "tags"
+    table "budgets"
+    table "flyway_schema_history"
 }
 
-Frontend --> REST API : HTTPS
-C --> S : @Service
-S --> R : @Repository
+node "Docker Container" as DC {
+    database "PostgreSQL Container"
+}
+
+Frontend --> "REST /api/v1/*" : HTTPS
+C --> S
+S --> R
 R --> PG : JDBC
-S --> SEC : Auth check
-C --> SEC : Filter chain
-FLY --> PG : migrate()
+SEC --> S : security check
+FLY --> PG : migrate on boot
 
 note bottom of PG
-  3 databases:
-  bookkeeping (prod)
-  bookkeeping_dev
-  bookkeeping_test
+  3 databases created:\n  bookkeeping (prod)\n  bookkeeping_dev\n  bookkeeping_test
+end note
+
+note bottom of DC
+  Start: ./scripts/start-db.sh\n  Scripts auto-create 3 databases
 end note
 
 @enduml
@@ -878,7 +858,7 @@ end note
 
 ---
 
-## 11. Controller & Service Dependency Graph
+## 11. Service Dependency Graph
 
 ```plantuml
 @startuml
@@ -897,33 +877,30 @@ package "core" {
 
 package "supporting.security" {
     class SecurityUtils
+    class JwtTokenProvider
 }
 
 package "supporting.auth" {
     class AuthService
 }
 
-package "common" {
+package "exception" {
     class BusinessException
 }
 
 TransactionService --> AccountService
 TransactionService --> CategoryService
 TransactionService --> SecurityUtils
-TransactionService --> TransactionMapper
-TransactionService --> BusinessException
+TransactionService ..> BusinessException
 
 AccountService --> SecurityUtils
-AccountService --> AccountMapper
-AccountService --> BusinessException
+AccountService ..> BusinessException
 
 CategoryService --> SecurityUtils
-CategoryService --> CategoryMapper
 
 TagService --> SecurityUtils
 
 BudgetService --> SecurityUtils
-BudgetService --> BudgetMapper
 
 DashboardController --> AccountRepository
 DashboardController --> TransactionRepository
@@ -933,8 +910,11 @@ AuthService --> UserRepository
 AuthService --> JwtTokenProvider
 
 note right of SecurityUtils
-  Extracts userId from
-  SecurityContext (JWT)
+  Extracts userId from\nSecurityContext (JWT filter)
+end note
+
+note right of BusinessException
+  Used by all services for\nerror handling (ResultCode)
 end note
 
 @enduml
