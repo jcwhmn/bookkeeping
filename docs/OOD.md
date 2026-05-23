@@ -7,6 +7,7 @@
 ```plantuml
 @startuml
 !theme plain
+hide empty members
 
 ' === BASE ===
 abstract class BaseEntity {
@@ -808,49 +809,61 @@ end note
 
 title Deployment Overview
 
-node "Frontend (Nuxt 4 + Vue 3)" {
-    component "Vue Pages"
-    component "Vuetify 3"
-    component "Pinia Store"
-    component "ECharts"
-    component "i18n locales"
+skinparam componentStyle uml2
+
+package "Frontend" {
+    [Vue Pages]
+    [Vuetify 3]
+    [Pinia Store]
+    [ECharts]
+    [i18n locales]
 }
 
-node "Backend (Spring Boot 4)" {
-    component "Controllers" as C
-    component "Services (@Service)" as S
-    component "Repositories (@Repository)" as R
-    component "Security (JWT Filter Chain)" as SEC
-    component "Flyway (migrations V1-V5)" as FLY
+
+package "Backend (Spring Boot 4)" {
+    [Controllers]
+    [Services]
+    [Repositories]
+    [Security (JWT)]
+    [Flyway Migrations]
 }
 
-node "PostgreSQL 17" as PG {
-    table "users"
-    table "accounts"
-    table "categories"
-    table "transactions"
-    table "tags"
-    table "budgets"
-    table "flyway_schema_history"
+database "PostgreSQL 17" {
+    datastore "users"
+    datastore "accounts"
+    datastore "categories"
+    datastore "transactions"
+    datastore "tags"
+    datastore "budgets"
+    datastore "flyway_schema_history"
 }
 
-node "Docker Container" as DC {
-    database "PostgreSQL Container"
+database "Docker Container" {
+    datastore "PostgreSQL Container"
 }
 
-Frontend --> "REST /api/v1/*" : HTTPS
-C --> S
-S --> R
-R --> PG : JDBC
-SEC --> S : security check
-FLY --> PG : migrate on boot
+package "External" {
+    [REST /api/v1/*]
+}
 
-note bottom of PG
-  3 databases created:\n  bookkeeping (prod)\n  bookkeeping_dev\n  bookkeeping_test
+
+[Vue Pages] --> [REST /api/v1/*]
+[Controllers] --> [Services]
+[Services] --> [Repositories]
+[Repositories] --> [PostgreSQL 17]
+[Security (JWT)] --> [Services]
+[Flyway Migrations] --> [PostgreSQL 17] : migrate on boot
+
+note bottom of database "PostgreSQL 17"
+  3 databases
+  bookkeeping (prod)
+  bookkeeping_dev
+  bookkeeping_test
 end note
 
-note bottom of DC
-  Start: ./scripts/start-db.sh\n  Scripts auto-create 3 databases
+note bottom of database "Docker Container"
+  Start: scripts/start-db.sh
+  Scripts auto-create 3 databases
 end note
 
 @enduml
