@@ -3,8 +3,6 @@ package com.bookkeeping.supporting.user;
 import com.bookkeeping.common.ResultCode;
 import com.bookkeeping.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,16 +11,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("UserService Unit Tests")
 class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserMapper userMapper;
 
     @InjectMocks
     private UserService userService;
@@ -31,90 +31,137 @@ class UserServiceTest {
 
     @BeforeEach
     void setUp() {
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setUsername("testuser");
-        testUser.setEmail("test@example.com");
-        testUser.setNickname("Test User");
-        testUser.setDefaultCurrency("USD");
-        testUser.setLanguage("en-US");
-        testUser.setDisabled(false);
+        testUser = User.builder()
+                
+                .username("testuser")
+                .email("test@example.com")
+                .nickname("Test User")
+                .password("hashedpassword")
+                .salt("salt123")
+                .defaultCurrency("USD")
+                .language("en-US")
+                .emailVerified(true)
+                .disabled(false)
+                .build().withId(1L);
     }
 
-    @Nested
-    @DisplayName("getCurrentUserDto()")
-    class GetCurrentUserDtoTests {
+    @Test
+    void findById_existingUser_returnsUser() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
-        @Test
-        @DisplayName("✓ Success: get current user DTO")
-        void getCurrentUserDto_withValidId_returnsUserDto() {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        Optional<User> result = userService.findById(1L);
 
-            UserDto result = userService.getCurrentUserDto(1L);
-
-            assertThat(result.idStr()).isEqualTo("1");
-            assertThat(result.username()).isEqualTo("testuser");
-            assertThat(result.nickname()).isEqualTo("Test User");
-        }
-
-        @Test
-        @DisplayName("✗ Failure: user not found")
-        void getCurrentUserDto_userNotFound_throwsException() {
-            when(userRepository.findById(999L)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> userService.getCurrentUserDto(999L))
-                    .isInstanceOf(BusinessException.class);
-        }
+        assertTrue(result.isPresent());
+        assertEquals("testuser", result.get().getUsername());
+        verify(userRepository).findById(1L);
     }
 
-    @Nested
-    @DisplayName("updateUser()")
-    class UpdateUserTests {
+    @Test
+    void findById_nonExistingUser_returnsEmpty() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        @Test
-        @DisplayName("✓ Success: update user fields")
-        void updateUser_withValidData_returnsUpdatedUserDto() {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userRepository.save(testUser)).thenReturn(testUser);
+        Optional<User> result = userService.findById(99L);
 
-            UserController.UpdateUserRequest request = new UserController.UpdateUserRequest(
-                    "New Nickname",
-                    "EUR",
-                    "zh-CN"
-            );
+        assertTrue(result.isEmpty());
+        verify(userRepository).findById(99L);
+    }
 
-            UserDto result = userService.updateUser(1L, request);
+    @Test
+    void getById_existingUser_returnsUser() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
 
-            assertThat(result.nickname()).isEqualTo("New Nickname");
-        }
+        User result = userService.getById(1L);
 
-        @Test
-        @DisplayName("✓ Success: update partial fields")
-        void updateUser_withPartialData_returnsUpdatedUserDto() {
-            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-            when(userRepository.save(testUser)).thenReturn(testUser);
+        assertNotNull(result);
+        assertEquals("testuser", result.getUsername());
+    }
 
-            UserController.UpdateUserRequest request = new UserController.UpdateUserRequest(
-                    "Only Nickname",
-                    null,
-                    null
-            );
+    @Test
+    void findByUsername_existingUser_returnsUser() {
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
-            UserDto result = userService.updateUser(1L, request);
+        Optional<User> result = userService.findByUsername("testuser");
 
-            assertThat(result.nickname()).isEqualTo("Only Nickname");
-            assertThat(result.defaultCurrency()).isEqualTo("USD"); // unchanged
-        }
+        assertTrue(result.isPresent());
+        assertEquals("test@example.com", result.get().getEmail());
+    }
 
-        @Test
-        @DisplayName("✗ Failure: update non-existent user")
-        void updateUser_userNotFound_throwsException() {
-            when(userRepository.findById(999L)).thenReturn(Optional.empty());
+    @Test
+    void findByUsername_nonExistingUser_returnsEmpty() {
+        when(userRepository.findByUsername("nonexistent")).thenReturn(Optional.empty());
 
-            UserController.UpdateUserRequest request = new UserController.UpdateUserRequest("Name", "EUR", null);
+        Optional<User> result = userService.findByUsername("nonexistent");
 
-            assertThatThrownBy(() -> userService.updateUser(999L, request))
-                    .isInstanceOf(BusinessException.class);
-        }
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void existsByUsername_existingUsername_returnsTrue() {
+        when(userRepository.existsByUsername("testuser")).thenReturn(true);
+
+        assertTrue(userService.existsByUsername("testuser"));
+    }
+
+    @Test
+    void existsByUsername_nonExistingUsername_returnsFalse() {
+        when(userRepository.existsByUsername("nonexistent")).thenReturn(false);
+
+        assertFalse(userService.existsByUsername("nonexistent"));
+    }
+
+    @Test
+    void save_user_savesAndReturns() {
+        when(userRepository.save(testUser)).thenReturn(testUser);
+
+        User result = userService.save(testUser);
+
+        assertEquals(testUser, result);
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void updateProfile_withValidRequest_callsMapper() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userMapper.toDto(any(User.class))).thenReturn(
+                new UserDto(1L, "testuser", "test@example.com", "New Nick", "USD", null, "en-US"));
+
+        UpdateUserRequest request = new UpdateUserRequest("New Nick", null, null, null);
+        UserDto result = userService.updateProfile(1L, request);
+
+        assertNotNull(result);
+        assertEquals("New Nick", result.nickname());
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateProfile_withExistingEmail_throwsException() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
+        
+        UpdateUserRequest request = new UpdateUserRequest(null, "existing@example.com", null, null);
+        
+        BusinessException exception = assertThrows(BusinessException.class,
+            () -> userService.updateProfile(1L, request));
+        
+        assertEquals(ResultCode.USER_ALREADY_EXISTS.getCode(), exception.getErrorCode());
+    }
+
+    @Test
+    void isActive_withVerifiedEnabledUser_returnsTrue() {
+        User user = testUser.toBuilder().emailVerified(true).disabled(false).build().withId(1L);
+        assertTrue(user.isActive());
+    }
+
+    @Test
+    void isActive_withDisabledUser_returnsFalse() {
+        User user = testUser.toBuilder().emailVerified(true).disabled(true).build().withId(1L);
+        assertFalse(user.isActive());
+    }
+
+    @Test
+    void isActive_withUnverifiedUser_returnsTrue() {
+        User user = testUser.toBuilder().emailVerified(false).disabled(false).build().withId(1L);
+        assertTrue(user.isActive());
     }
 }

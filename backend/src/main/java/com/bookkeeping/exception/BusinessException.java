@@ -1,38 +1,38 @@
 package com.bookkeeping.exception;
 
 import com.bookkeeping.common.ResultCode;
-import lombok.Getter;
 
-@Getter
+/**
+ * Custom business exception with error code.
+ */
 public class BusinessException extends RuntimeException {
-    private final int code;
-    private final String message;
     
-    public BusinessException(int code, String message) {
-        super(message);
-        this.code = code;
-        this.message = message;
+    private final int errorCode;
+    private final String errorMessage;
+    
+    public BusinessException(ResultCode resultCode) {
+        super(resultCode.getMessage());
+        this.errorCode = resultCode.getCode();
+        this.errorMessage = resultCode.getMessage();
     }
     
     public BusinessException(ResultCode resultCode, String message) {
         super(message);
-        this.code = resultCode.getCode();
-        this.message = message;
+        this.errorCode = resultCode.getCode();
+        this.errorMessage = message;
     }
     
-    public static BusinessException notFound(ResultCode resultCode) {
-        return new BusinessException(resultCode.getCode(), resultCode.getMessage());
+    public BusinessException(int errorCode, String errorMessage) {
+        super(errorMessage);
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
     }
     
-    public static BusinessException unauthorized(ResultCode resultCode, String message) {
-        return new BusinessException(resultCode.getCode(), message);
+    public int getErrorCode() {
+        return errorCode;
     }
     
-    public static BusinessException badRequest(ResultCode resultCode, String message) {
-        return new BusinessException(resultCode.getCode(), message);
-    }
-    
-    public static BusinessException conflict(ResultCode resultCode, String message) {
-        return new BusinessException(resultCode.getCode(), message);
+    public String getErrorMessage() {
+        return errorMessage;
     }
 }

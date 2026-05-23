@@ -1,8 +1,11 @@
 package com.bookkeeping.common;
 
+/**
+ * Interface for entities with audit fields.
+ * Provides consistent createdAt/updatedAt tracking.
+ * Only getters exposed — timestamp management is handled by JPA lifecycle callbacks.
+ */
 public interface Auditable {
-    Long getCreatedBy();
-    void setCreatedBy(Long createdBy);
-    Long getModifiedBy();
-    void setModifiedBy(Long modifiedBy);
+    Long getCreatedAt();
+    Long getUpdatedAt();
 }

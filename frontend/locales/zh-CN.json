@@ -1,0 +1,23 @@
+{
+  "login": "登录",
+  "register": "注册",
+  "dashboard": "仪表盘",
+  "accounts": "账本",
+  "profile": "个人资料",
+  "username": "用户名",
+  "password": "密码",
+  "email": "邮箱",
+  "nickname": "昵称",
+  "currency": "货币",
+  "balance": "余额",
+  "logout": "退出",
+  "create": "创建",
+  "update": "更新",
+  "delete": "删除",
+  "cancel": "取消",
+  "save": "保存",
+  "required": "必填",
+  "loginFailed": "登录失败",
+  "registerFailed": "注册失败",
+  "noAccount": "没有账号？立即注册"
+}

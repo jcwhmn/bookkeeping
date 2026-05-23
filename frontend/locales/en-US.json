@@ -1,0 +1,23 @@
+{
+  "login": "Login",
+  "register": "Register",
+  "dashboard": "Dashboard",
+  "accounts": "Accounts",
+  "profile": "Profile",
+  "username": "Username",
+  "password": "Password",
+  "email": "Email",
+  "nickname": "Nickname",
+  "currency": "Currency",
+  "balance": "Balance",
+  "logout": "Logout",
+  "create": "Create",
+  "update": "Update",
+  "delete": "Delete",
+  "cancel": "Cancel",
+  "save": "Save",
+  "required": "Required",
+  "loginFailed": "Login failed",
+  "registerFailed": "Registration failed",
+  "noAccount": "Don't have an account? Register"
+}

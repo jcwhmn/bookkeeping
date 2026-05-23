@@ -2,13 +2,21 @@ package com.bookkeeping.supporting.user;
 
 import com.bookkeeping.common.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 
+/**
+ * User entity for authentication and profile management.
+ */
 @Entity
 @Table(name = "users")
 @Getter
-@Setter
+@Builder(toBuilder = true)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class User extends BaseEntity {
     
     @Column(nullable = false, unique = true, length = 32)
@@ -20,7 +28,7 @@ public class User extends BaseEntity {
     @Column(length = 64)
     private String nickname;
     
-    @Column(nullable = false, length = 64)
+    @Column(nullable = false, length = 100)
     private String password;
     
     @Column(nullable = false, length = 10)
@@ -39,4 +47,10 @@ public class User extends BaseEntity {
     private Boolean emailVerified = false;
     
     private Boolean disabled = false;
+    
+    // Convenience method for checking if user is active
+    // Note: emailVerified check removed - new users can login immediately after registration
+    public boolean isActive() {
+        return !Boolean.TRUE.equals(disabled);
+    }
 }

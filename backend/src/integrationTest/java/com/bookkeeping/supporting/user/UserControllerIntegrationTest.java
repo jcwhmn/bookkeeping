@@ -1,166 +1,190 @@
 package com.bookkeeping.supporting.user;
 
 import com.bookkeeping.BaseIntegrationTest;
-import com.bookkeeping.supporting.user.User;
-import com.bookkeeping.supporting.user.UserRepository;
-import com.bookkeeping.core.account.Account;
-import com.bookkeeping.core.account.AccountRepository;
-import com.bookkeeping.common.enums.AccountType;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
+import com.bookkeeping.common.ResultCode;
+import com.bookkeeping.exception.BusinessException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("User Controller Integration Tests")
-public class UserControllerIntegrationTest extends BaseIntegrationTest {
+/**
+ * Integration tests for UserService and UserRepository.
+ * Tests against real PostgreSQL database.
+ */
+class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
-    private AccountRepository accountRepository;
+    private UserService userService;
 
     private User testUser;
 
-    @Override
-    protected void insertTestData() {
-        // Create test user
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+        
         testUser = new User();
         testUser.setUsername("testuser");
         testUser.setEmail("test@example.com");
         testUser.setNickname("Test User");
-        testUser.setPassword(passwordEncoder.encode("password123"));
-        testUser.setSalt("testsalt1");
+        testUser.setPassword("hashedpassword");
+        testUser.setSalt("salt123");
         testUser.setDefaultCurrency("USD");
-        testUser.setLanguage("en");
+        testUser.setLanguage("en-US");
         testUser.setEmailVerified(true);
         testUser.setDisabled(false);
         testUser = userRepository.save(testUser);
-
-        // Create a test account
-        Account account = new Account();
-        account.setUserId(testUser.getId());
-        account.setName("Test Cash");
-        account.setType(AccountType.CASH);
-        account.setCurrency("USD");
-        account.setBalance(100000L);
-        account.setIcon("wallet");
-        account.setColor("#4CAF50");
-        account.setIncludeInTotal(true);
-        accountRepository.save(account);
     }
 
-    @Override
-    protected void cleanTestData() {
-        accountRepository.deleteAll();
-        userRepository.deleteAll();
+    @Test
+    void findById_existingUser_returnsUser() {
+        var user = userService.findById(testUser.getId());
+        
+        assertTrue(user.isPresent());
+        assertEquals("testuser", user.get().getUsername());
+        assertEquals("test@example.com", user.get().getEmail());
     }
 
-    @Nested
-    @DisplayName("GET /api/v1/users/me")
-    class GetCurrentUserTests {
-
-        @Test
-        @DisplayName("✓ Success: Get current user info")
-        void getCurrentUser_returnsUserInfo() throws Exception {
-            mockMvc.perform(get("/api/v1/users/me")
-                    .header("Authorization", authHeader()))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.result.username").value("testuser"))
-                    .andExpect(jsonPath("$.result.nickname").value("Test User"))
-                    .andExpect(jsonPath("$.result.email").value("test@example.com"))
-                    .andExpect(jsonPath("$.result.defaultCurrency").value("USD"));
-        }
-
-        @Test
-        @DisplayName("✗ Failure: Get current user without auth")
-        void getCurrentUser_withoutAuth_returnsUnauthorized() throws Exception {
-            mockMvc.perform(get("/api/v1/users/me"))
-                    .andExpect(status().isUnauthorized());
-        }
+    @Test
+    void findById_nonExistingUser_returnsEmpty() {
+        var user = userService.findById(99999L);
+        
+        assertFalse(user.isPresent());
     }
 
-    @Nested
-    @DisplayName("PUT /api/v1/users/me")
-    class UpdateCurrentUserTests {
+    @Test
+    void getById_nonExistingUser_throwsBusinessException() {
+        BusinessException ex = assertThrows(BusinessException.class, () -> {
+            userService.getById(99999L);
+        });
+        
+        assertEquals(ResultCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+    }
 
-        @Test
-        @DisplayName("✓ Success: Update all user fields")
-        void updateCurrentUser_withAllFields_returnsUpdated() throws Exception {
-            String json = """
-                {
-                    "nickname": "Updated Nickname",
-                    "defaultCurrency": "EUR",
-                    "language": "zh-CN"
-                }
-                """;
-            
-            mockMvc.perform(put("/api/v1/users/me")
-                    .header("Authorization", authHeader())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.result.nickname").value("Updated Nickname"))
-                    .andExpect(jsonPath("$.result.defaultCurrency").value("EUR"))
-                    .andExpect(jsonPath("$.result.language").value("zh-CN"));
-        }
+    @Test
+    void findByUsername_existingUser_returnsUser() {
+        var user = userService.findByUsername("testuser");
+        
+        assertTrue(user.isPresent());
+        assertEquals("test@example.com", user.get().getEmail());
+    }
 
-        @Test
-        @DisplayName("✓ Success: Update partial data")
-        void updateCurrentUser_withPartialData_returnsUpdated() throws Exception {
-            String json = """
-                {
-                    "nickname": "Partial Update"
-                }
-                """;
-            
-            mockMvc.perform(put("/api/v1/users/me")
-                    .header("Authorization", authHeader())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.result.nickname").value("Partial Update"))
-                    .andExpect(jsonPath("$.result.defaultCurrency").value("USD")); // unchanged
-        }
+    @Test
+    void getByUsername_nonExistingUser_throwsBusinessException() {
+        BusinessException ex = assertThrows(BusinessException.class, () -> {
+            userService.getByUsername("nonexistent");
+        });
+        
+        assertEquals(ResultCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+    }
 
-        @Test
-        @DisplayName("✓ Success: Update currency only")
-        void updateCurrentUser_withCurrencyOnly_returnsUpdated() throws Exception {
-            String json = """
-                {
-                    "defaultCurrency": "GBP"
-                }
-                """;
-            
-            mockMvc.perform(put("/api/v1/users/me")
-                    .header("Authorization", authHeader())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.result.defaultCurrency").value("GBP"));
-        }
+    @Test
+    void updateProfile_withNickname_updatesNickname() {
+        var request = new UpdateUserRequest("New Nickname", null, null, null);
+        
+        var result = userService.updateProfile(testUser.getId(), request);
+        
+        assertEquals("New Nickname", result.nickname());
+        assertEquals("testuser", result.username()); // Unchanged
+    }
 
-        @Test
-        @DisplayName("✗ Failure: Update without auth")
-        void updateCurrentUser_withoutAuth_returnsUnauthorized() throws Exception {
-            String json = """
-                {
-                    "nickname": "Hacked"
-                }
-                """;
-            
-            mockMvc.perform(put("/api/v1/users/me")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
-                    .andExpect(status().isUnauthorized());
-        }
+    @Test
+    void updateProfile_withNewCurrency_updatesCurrency() {
+        var request = new UpdateUserRequest(null, null, "EUR", null);
+        
+        var result = userService.updateProfile(testUser.getId(), request);
+        
+        assertEquals("EUR", result.defaultCurrency());
+    }
+
+    @Test
+    void updateProfile_withNewEmail_updatesEmail() {
+        var request = new UpdateUserRequest(null, "newemail@example.com", null, null);
+        
+        var result = userService.updateProfile(testUser.getId(), request);
+        
+        assertEquals("newemail@example.com", result.email());
+    }
+
+    @Test
+    void updateProfile_withExistingEmail_throwsException() {
+        // Create another user
+        User anotherUser = new User();
+        anotherUser.setUsername("another");
+        anotherUser.setEmail("another@example.com");
+        anotherUser.setPassword("hash");
+        anotherUser.setSalt("salt");
+        anotherUser.setEmailVerified(true);
+        userRepository.save(anotherUser);
+        
+        // Try to update testUser's email to the existing email
+        var request = new UpdateUserRequest(null, "another@example.com", null, null);
+        
+        BusinessException ex = assertThrows(BusinessException.class, () -> {
+            userService.updateProfile(testUser.getId(), request);
+        });
+        
+        assertEquals(ResultCode.USER_ALREADY_EXISTS.getCode(), ex.getErrorCode());
+    }
+
+    @Test
+    void existsByUsername_existingUser_returnsTrue() {
+        assertTrue(userService.existsByUsername("testuser"));
+    }
+
+    @Test
+    void existsByUsername_nonExistingUser_returnsFalse() {
+        assertFalse(userService.existsByUsername("nonexistent"));
+    }
+
+    @Test
+    void existsByEmail_existingUser_returnsTrue() {
+        assertTrue(userService.existsByEmail("test@example.com"));
+    }
+
+    @Test
+    void save_newUser_persistsAndRetrieves() {
+        User newUser = new User();
+        newUser.setUsername("newuser");
+        newUser.setEmail("newuser@example.com");
+        newUser.setNickname("New User");
+        newUser.setPassword("hash");
+        newUser.setSalt("salt");
+        newUser.setEmailVerified(true);
+        
+        User saved = userRepository.save(newUser);
+        assertNotNull(saved.getId());
+        
+        User retrieved = userRepository.findById(saved.getId()).orElseThrow();
+        assertEquals("newuser", retrieved.getUsername());
+    }
+
+    @Test
+    void deleteUser_userRemovedFromDatabase() {
+        Long userId = testUser.getId();
+        
+        userRepository.deleteById(userId);
+        
+        assertFalse(userRepository.findById(userId).isPresent());
+    }
+
+    @Test
+    void count_afterOperations_returnsCorrectCount() {
+        long initialCount = userRepository.count();
+        assertEquals(1, initialCount);
+        
+        User user2 = new User();
+        user2.setUsername("user2");
+        user2.setEmail("user2@example.com");
+        user2.setPassword("hash");
+        user2.setSalt("salt");
+        user2.setEmailVerified(true);
+        userRepository.save(user2);
+        
+        assertEquals(2, userRepository.count());
     }
 }

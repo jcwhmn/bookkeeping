@@ -1,5 +1,3 @@
-import org.gradle.api.tasks.SourceSet
-
 plugins {
     java
     id("org.springframework.boot") version "4.0.6"
@@ -11,6 +9,7 @@ group = "com.bookkeeping"
 version = "0.0.1-SNAPSHOT"
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -23,70 +22,61 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
 
-// Create integration test configurations FIRST
-val intTestImpl = configurations.create("intTestImpl") {
-    extendsFrom(configurations.implementation.get())
-}
-
-val intTestRuntime = configurations.create("intTestRuntime") {
-    extendsFrom(configurations.runtimeOnly.get())
-}
-
-// Define integrationTest source set
-sourceSets {
-    val main = getByName("main")
-    create("integrationTest") {
-        compileClasspath = main.output + intTestImpl
-        runtimeClasspath = main.output + intTestRuntime
-    }
+// Handle duplicates
+tasks.withType<Copy>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // Main dependencies
 dependencies {
+    // Spring Boot Starters
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     
+    // Database
     implementation("org.postgresql:postgresql")
-    implementation("org.flywaydb:flyway-database-postgresql")
+    implementation("org.flywaydb:flyway-core:11.14.1")
+    implementation("org.flywaydb:flyway-database-postgresql:11.14.1")
     
-    // OpenAPI/Swagger
+    // API Documentation
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8")
     
+    // Security
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
     
+    // Caching
     implementation("com.github.ben-manes.caffeine:caffeine")
     
+    // Utilities
     implementation("org.apache.commons:commons-lang3:3.15.0")
     implementation("commons-codec:commons-codec:1.16.1")
     
+    // Lombok + MapStruct (order matters: Lombok first for lombok-mapstruct-binding)
     compileOnly("org.projectlombok:lombok:1.18.38")
     annotationProcessor("org.projectlombok:lombok:1.18.38")
+    implementation("org.mapstruct:mapstruct:1.6.3")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
     
-    // Unit test dependencies
+    // MapStructPlus (custom annotation processor - for entity to DTO mapping)
+    implementation("com.jcwhmn:mapstruct-plus:1.0.0-SNAPSHOT")
+    annotationProcessor("com.jcwhmn:mapstruct-plus:1.0.0-SNAPSHOT")
+    
+    // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.assertj:assertj-core:3.25.3")
-    testImplementation("org.junit.jupiter:junit-jupiter-api")
-    testImplementation("org.junit.jupiter:junit-jupiter-params")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    
-    // Integration test dependencies
-    intTestImpl("org.springframework.boot:spring-boot-starter-test")
-    intTestImpl("org.springframework.boot:spring-boot-starter-web")
-    intTestImpl("org.springframework.boot:spring-boot-test")
-    intTestImpl("org.springframework.security:spring-security-test")
-    
-    intTestRuntime("com.h2database:h2")
-    
-    intTestRuntime("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("com.h2database:h2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-// Configure unit test task
-tasks.withType<Test> {
+tasks.named<Test>("test") {
     useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")
@@ -94,126 +84,43 @@ tasks.withType<Test> {
         showExceptions = true
         showCauses = true
     }
+}
+
+// Integration test source set
+sourceSets {
+    create("integrationTest") {
+        java.srcDir("src/integrationTest/java")
+        resources.srcDir("src/integrationTest/resources")
+        compileClasspath += main.get().runtimeClasspath
+        runtimeClasspath += main.get().runtimeClasspath
+    }
+}
+
+// Integration test dependencies
+dependencies {
+    "integrationTestImplementation"(sourceSets.main.get().output)
+    "integrationTestImplementation"(sourceSets.main.get().runtimeClasspath)
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-test")
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-web")
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-test")
+    "integrationTestImplementation"("org.springframework.security:spring-security-test")
+    "integrationTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 
 // Integration test task
-tasks.register<Test>("integrationTest") {
-    description = "Runs integration tests"
+val integrationTest by tasks.registering(Test::class) {
     group = "verification"
-    
+    description = "Runs integration tests against real database"
+    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+    classpath = sourceSets["integrationTest"].runtimeClasspath
     useJUnitPlatform()
     shouldRunAfter("test")
-    
-    // Use integrationTest source set output
-    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
-    
-    // Build classpath from source sets and configurations
-    classpath = sourceSets["integrationTest"].output + 
-                sourceSets["main"].output + 
-                intTestImpl + 
-                intTestRuntime
-    
-    // Use integrationtest profile
-    systemProperty("spring.profiles.active", "integrationtest")
-    
-    // Enable test logging
+    maxParallelForks = 1
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
     testLogging {
         events("passed", "skipped", "failed")
         displayGranularity = 0
         showExceptions = true
         showCauses = true
-    }
-}
-
-// Combined test summary task
-tasks.register("allTests") {
-    group = "verification"
-    description = "Run all tests (unit + integration)"
-    dependsOn(tasks.test, tasks.named("integrationTest"))
-}
-
-// Generate combined HTML test report
-tasks.register("allTestsReport") {
-    group = "verification"
-    description = "Generate combined HTML test report"
-    dependsOn(tasks.test, tasks.named("integrationTest"))
-    
-    doLast {
-        val reportDir = file("build/reports/all-tests")
-        if (!reportDir.exists()) reportDir.mkdirs()
-        
-        // Copy unit test HTML if exists
-        val unitSrc = file("build/reports/tests/test")
-        if (unitSrc.exists() && unitSrc.isDirectory) {
-            unitSrc.copyRecursively(file("${reportDir}/unit-tests"), true)
-        }
-        
-        // Copy integration test HTML if exists
-        val intSrc = file("build/reports/tests/integrationTest")
-        if (intSrc.exists() && intSrc.isDirectory) {
-            intSrc.copyRecursively(file("${reportDir}/integration-tests"), true)
-        }
-        
-        // Count tests
-        fun countTests(dir: String): Int {
-            val f = file(dir)
-            if (!f.exists()) return 0
-            return f.listFiles()
-                ?.filter { it.name.startsWith("TEST-") && it.name.endsWith(".xml") }
-                ?.sumOf { xmlFile ->
-                    Regex("""tests="(\d+)"""").find(xmlFile.readText())?.groupValues?.get(1)?.toInt() ?: 0
-                } ?: 0
-        }
-        
-        val unitCount = countTests("build/test-results/test")
-        val intCount = countTests("build/test-results/integrationTest")
-        val total = unitCount + intCount
-        
-        // Create index.html
-        val html = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Test Report - All Tests</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .summary { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .pass { color: green; font-size: 18px; }
-        h1 { color: #333; }
-        .link { margin: 10px 0; font-size: 16px; }
-        a { color: #0066cc; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <h1>All Tests Report</h1>
-    <div class="summary">
-        <h2>Summary</h2>
-        <p>Total Tests: <strong>${total}</strong></p>
-        <p>Unit Tests: ${unitCount}</p>
-        <p>Integration Tests: ${intCount}</p>
-        <p class="pass">All tests passed!</p>
-    </div>
-    <div class="links">
-        <h3>Detailed Reports</h3>
-        <p class="link"><a href="unit-tests/index.html">Unit Tests Report</a></p>
-        <p class="link"><a href="integration-tests/index.html">Integration Tests Report</a></p>
-    </div>
-</body>
-</html>
-        """.trimIndent()
-        
-        file("${reportDir}/index.html").writeText(html)
-        
-        println()
-        println("===========================================")
-        println("  TEST REPORT GENERATED")
-        println("===========================================")
-        println("  Location: ${reportDir.absolutePath}/index.html")
-        println("  Unit Tests: ${unitCount}")
-        println("  Integration Tests: ${intCount}")
-        println("  Total: ${total}")
-        println("===========================================")
-        println()
     }
 }

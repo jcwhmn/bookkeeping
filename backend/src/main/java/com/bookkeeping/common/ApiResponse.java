@@ -1,26 +1,40 @@
 package com.bookkeeping.common;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Data
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+/**
+ * Standard API response wrapper.
+ * All API responses follow this envelope format.
+ *
+ * @param <T> The type of result data
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiResponse<T> {
+public record ApiResponse<T>(
+    @JsonProperty("success") boolean isSuccess,
+    T result,
+    Integer errorCode,
+    String errorMessage
+) {
 
-    private boolean success;
-    private T result;
-    private Integer errorCode;
-    private String errorMessage;
-    private String path;
-
-    public static <T> ApiResponse<T> success(T result) {
-        return new ApiResponse<>(true, result, null, null, null);
+    /**
+     * Create a successful response with data.
+     */
+    public static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(true, data, null, null);
     }
 
-    public static <T> ApiResponse<T> error(int errorCode, String errorMessage, String path) {
-        return new ApiResponse<>(false, null, errorCode, errorMessage, path);
+    /**
+     * Create a successful response without data.
+     */
+    public static <T> ApiResponse<T> success() {
+        return new ApiResponse<>(true, null, null, null);
+    }
+
+    /**
+     * Create an error response.
+     */
+    public static <T> ApiResponse<T> error(int errorCode, String errorMessage) {
+        return new ApiResponse<>(false, null, errorCode, errorMessage);
     }
 }

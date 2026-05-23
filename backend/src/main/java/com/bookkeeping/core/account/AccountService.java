@@ -1,109 +1,133 @@
 package com.bookkeeping.core.account;
 
-import com.bookkeeping.common.enums.AccountType;
-import com.bookkeeping.exception.BusinessException;
 import com.bookkeeping.common.ResultCode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
+import com.bookkeeping.exception.BusinessException;
+import com.bookkeeping.supporting.security.SecurityUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Slf4j
+/**
+ * Business logic for account management.
+ */
 @Service
-@RequiredArgsConstructor
 public class AccountService {
-    
+
     private final AccountRepository accountRepository;
-    
-    @Transactional(readOnly = true)
-    public List<AccountDto> getAccountsByUser(Long userId) {
-        return accountRepository.findAllByUser(userId)
-            .stream()
-            .map(AccountDto::fromEntity)
-            .toList();
+    private final AccountMapper accountMapper;
+    private final SecurityUtils securityUtils;
+
+    public AccountService(AccountRepository accountRepository,
+                          AccountMapper accountMapper,
+                          SecurityUtils securityUtils) {
+        this.accountRepository = accountRepository;
+        this.accountMapper = accountMapper;
+        this.securityUtils = securityUtils;
     }
-    
+
+    /**
+     * Get all accounts for the current user.
+     */
     @Transactional(readOnly = true)
-    public AccountDto getAccountById(Long userId, Long accountId) {
-        Account account = accountRepository.findByUserAndId(userId, accountId)
-            .orElseThrow(() -> BusinessException.notFound(ResultCode.ACCOUNT_NOT_FOUND));
-        return AccountDto.fromEntity(account);
+    public List<AccountDto> getCurrentUserAccounts() {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        return accountRepository.findByUserIdAndDeletedFalse(userId).stream()
+                .map(accountMapper::toDto)
+                .toList();
     }
-    
+
+    /**
+     * Get account by ID for the current user.
+     */
+    @Transactional(readOnly = true)
+    public AccountDto getAccount(Long id) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        Account account = accountRepository.findByIdAndUserIdAndDeletedFalse(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.ACCOUNT_NOT_FOUND, "Account not found"));
+        return accountMapper.toDto(account);
+    }
+
+    /**
+     * Create a new account for the current user.
+     */
     @Transactional
-    public AccountDto createAccount(Long userId, CreateAccountRequest request) {
-        // Check for duplicate name
-        if (accountRepository.findByUserAndName(userId, request.name()).isPresent()) {
-            throw BusinessException.conflict(ResultCode.ACCOUNT_DUPLICATE_NAME, "Account with this name already exists");
+    public AccountDto createAccount(CreateAccountRequest request) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+
+        // Check if account with same name already exists
+        if (accountRepository.existsByNameAndUserIdAndDeletedFalse(request.name(), userId)) {
+            throw new BusinessException(ResultCode.ACCOUNT_ALREADY_EXISTS, 
+                    "Account with name '" + request.name() + "' already exists");
         }
-        
-        Account account = new Account();
-        account.setUserId(userId);
-        account.setName(request.name());
-        account.setType(AccountType.valueOf(request.type()));
-        account.setCurrency(request.currency() != null ? request.currency() : "USD");
-        account.setBalance(request.balanceStr() != null ? Long.parseLong(request.balanceStr()) : 0L);
-        account.setIcon(request.icon());
-        account.setColor(request.color());
-        account.setNotes(request.notes());
-        account.setIncludeInTotal(request.includeInTotalStr() != null ? Boolean.parseBoolean(request.includeInTotalStr()) : true);
-        
+
+        Account account = Account.builder()
+                .name(request.name())
+                .accountType(request.accountType())
+                .currency(request.currency())
+                .balance(request.initialBalance())
+                .userId(userId)
+                .description(request.description())
+                .deleted(false)
+                .build();
+
         Account saved = accountRepository.save(account);
-        log.info("Account created: {} for user {}", saved.getId(), userId);
-        
-        return AccountDto.fromEntity(saved);
+        return accountMapper.toDto(saved);
     }
-    
+
+    /**
+     * Update an existing account.
+     */
     @Transactional
-    public AccountDto updateAccount(Long userId, Long accountId, CreateAccountRequest request) {
-        Account account = accountRepository.findByUserAndId(userId, accountId)
-            .orElseThrow(() -> BusinessException.notFound(ResultCode.ACCOUNT_NOT_FOUND));
-        
-        // Check for duplicate name (if name changed)
-        if (!account.getName().equals(request.name())) {
-            if (accountRepository.findByUserAndName(userId, request.name()).isPresent()) {
-                throw BusinessException.conflict(ResultCode.ACCOUNT_DUPLICATE_NAME, "Account with this name already exists");
+    public AccountDto updateAccount(Long id, UpdateAccountRequest request) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        Account account = accountRepository.findByIdAndUserIdAndDeletedFalse(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.ACCOUNT_NOT_FOUND, "Account not found"));
+
+        Account.AccountBuilder builder = account.toBuilder();
+        if (request.name() != null) {
+            // Check if another account has the same name
+            if (!request.name().equals(account.getName()) 
+                    && accountRepository.existsByNameAndUserIdAndDeletedFalse(request.name(), userId)) {
+                throw new BusinessException(ResultCode.ACCOUNT_ALREADY_EXISTS,
+                        "Account with name '" + request.name() + "' already exists");
             }
+            builder.name(request.name());
         }
-        
-        account.setName(request.name());
-        account.setType(AccountType.valueOf(request.type()));
-        account.setCurrency(request.currency() != null ? request.currency() : "USD");
-        if (request.balanceStr() != null) {
-            account.setBalance(Long.parseLong(request.balanceStr()));
+        if (request.description() != null) {
+            builder.description(request.description());
         }
-        account.setIcon(request.icon());
-        account.setColor(request.color());
-        account.setNotes(request.notes());
-        if (request.includeInTotalStr() != null) {
-            account.setIncludeInTotal(Boolean.parseBoolean(request.includeInTotalStr()));
-        }
-        
-        Account saved = accountRepository.save(account);
-        log.info("Account updated: {}", accountId);
-        
-        return AccountDto.fromEntity(saved);
+
+        return accountMapper.toDto(accountRepository.save(builder.build()));
     }
-    
+
+    /**
+     * Delete an account (soft delete).
+     */
     @Transactional
-    public void deleteAccount(Long userId, Long accountId) {
-        Account account = accountRepository.findByUserAndId(userId, accountId)
-            .orElseThrow(() -> BusinessException.notFound(ResultCode.ACCOUNT_NOT_FOUND));
-        
-        accountRepository.delete(account);
-        log.info("Account deleted: {}", accountId);
+    public void deleteAccount(Long id) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        Account account = accountRepository.findByIdAndUserIdAndDeletedFalse(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.ACCOUNT_NOT_FOUND, "Account not found"));
+
+        accountRepository.save(account.toBuilder().deleted(true).build());
     }
-    
-    public record CreateAccountRequest(
-        String name,
-        String type,
-        String currency,
-        String balanceStr,
-        String icon,
-        String color,
-        String notes,
-        String includeInTotalStr
-    ) {}
+
+    /**
+     * Update account balance (used by transaction module).
+     */
+    @Transactional
+    public void updateBalance(Long accountId, Long amountChange) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new BusinessException(ResultCode.ACCOUNT_NOT_FOUND, "Account not found"));
+        accountRepository.save(account.toBuilder().balance(account.getBalance() + amountChange).build());
+    }
+
+    /**
+     * Check if account exists and belongs to user.
+     */
+    @Transactional(readOnly = true)
+    public boolean accountExists(Long accountId, Long userId) {
+        return accountRepository.findByIdAndUserIdAndDeletedFalse(accountId, userId).isPresent();
+    }
 }

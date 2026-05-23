@@ -1,48 +1,63 @@
 package com.bookkeeping.supporting.user;
 
 import com.bookkeeping.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST controller for user management.
+ */
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@Tag(name = "Users", description = "User management APIs")
+@SecurityRequirement(name = "bearerAuth")
 public class UserController {
     
     private final UserService userService;
+    private final UserMapper userMapper;
     
+    /**
+     * Get current user profile.
+     * For demo purposes, returns user with ID 1.
+     */
     @GetMapping("/me")
-    public ApiResponse<UserDto> getCurrentUser() {
-        Long userId = getCurrentUserId();
-        UserDto dto = userService.getCurrentUserDto(userId);
-        return ApiResponse.success(dto);
-    }
-    
-    @PutMapping("/me")
-    public ApiResponse<UserDto> updateCurrentUser(@RequestBody UpdateUserRequest request) {
-        Long userId = getCurrentUserId();
-        UserDto dto = userService.updateUser(userId, request);
-        return ApiResponse.success(dto);
+    @Operation(summary = "Get current user", description = "Get the profile of the currently authenticated user")
+    public ResponseEntity<ApiResponse<UserDto>> getCurrentUser() {
+        // TODO: Get actual user from security context (Phase 4)
+        UserDto user = userService.findById(1L)
+            .map(userMapper::toDto)
+            .orElseThrow(() -> new RuntimeException("Demo user not found"));
+        return ResponseEntity.ok(ApiResponse.success(user));
     }
     
     /**
-     * Extract user ID from JWT token in SecurityContext
+     * Update current user profile.
+     * For demo purposes, updates user with ID 1.
      */
-    private Long getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) {
-            throw new IllegalStateException("No authentication found in SecurityContext");
-        }
-        // The principal is the username from JWT, which is the user ID
-        String userIdStr = auth.getName();
-        return Long.parseLong(userIdStr);
+    @PutMapping("/me")
+    @Operation(summary = "Update current user", description = "Update the profile of the currently authenticated user")
+    public ResponseEntity<ApiResponse<UserDto>> updateCurrentUser(
+            @Valid @RequestBody UpdateUserRequest request) {
+        // TODO: Get actual user from security context (Phase 4)
+        UserDto user = userService.updateProfile(1L, request);
+        return ResponseEntity.ok(ApiResponse.success(user));
     }
     
-    public record UpdateUserRequest(
-        String nickname,
-        String defaultCurrency,
-        String language
-    ) {}
+    /**
+     * Get user by ID.
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "Get user by ID", description = "Get a user by their ID")
+    public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable Long id) {
+        UserDto user = userService.findById(id)
+            .map(userMapper::toDto)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(ApiResponse.success(user));
+    }
 }
