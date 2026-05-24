@@ -14,6 +14,7 @@
       <v-btn variant="text" to="/tags" active-class="text-primary" class="text-none">Tags</v-btn>
       <v-btn variant="text" to="/statistics" active-class="text-primary" class="text-none">Statistics</v-btn>
       <v-btn variant="text" to="/budgets" active-class="text-primary" class="text-none">Budgets</v-btn>
+      <v-btn variant="text" to="/templates" active-class="text-primary" class="text-none">Templates</v-btn>
       <v-btn variant="text" to="/reports" active-class="text-primary" class="text-none">Reports</v-btn>
 
       <v-spacer />
