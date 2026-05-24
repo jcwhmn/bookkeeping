@@ -16,6 +16,7 @@
       <v-btn variant="text" to="/budgets" active-class="text-primary" class="text-none">Budgets</v-btn>
       <v-btn variant="text" to="/templates" active-class="text-primary" class="text-none">Templates</v-btn>
       <v-btn variant="text" to="/reports" active-class="text-primary" class="text-none">Reports</v-btn>
+      <v-btn variant="text" to="/exchange" active-class="text-primary" class="text-none">Exchange</v-btn>
 
       <v-spacer />
 

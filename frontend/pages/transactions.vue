@@ -41,6 +41,21 @@
         <v-btn icon="mdi-chevron-right" variant="text" size="small" @click="nextMonth" :disabled="!canGoNext" />
       </div>
       <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate()">Add</v-btn>
+      <v-menu>
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" variant="outlined" prepend-icon="mdi-export" class="ml-2">
+            Export
+            <v-icon end size="small">mdi-chevron-down</v-icon>
+          </v-btn>
+        </template>
+        <v-list density="compact">
+          <v-list-item prepend-icon="mdi-file-delimited" title="Export CSV" @click="exportData('csv')" />
+          <v-list-item prepend-icon="mdi-file-delimited" title="Export TSV" @click="exportData('tsv')" />
+        </v-list>
+      </v-menu>
+      <v-btn variant="outlined" prepend-icon="mdi-import" class="ml-2" @click="importDialog = true">
+        Import
+      </v-btn>
     </div>
 
     <!-- Batch Actions Bar -->
@@ -290,6 +305,29 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Import Dialog -->
+    <v-dialog v-model="importDialog" max-width="500">
+      <v-card class="rounded-lg">
+        <v-card-title class="d-flex align-center">
+          Import Transactions
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="importDialog = false" />
+        </v-card-title>
+        <v-card-text>
+          <v-alert type="info" variant="tonal" class="mb-4 rounded-lg">
+            Supported formats: CSV, TSV. Upload a file to preview and import transactions.
+          </v-alert>
+          <v-select v-model="importFormat" :items="[{title:'CSV', value:'csv'}, {title:'TSV', value:'tsv'}]" label="Format" variant="outlined" density="comfortable" class="mb-3" />
+          <v-file-input v-model="importFile" label="Select File" variant="outlined" density="comfortable" accept=".csv,.tsv" />
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="text" @click="importDialog = false">Cancel</v-btn>
+          <v-btn color="primary" rounded="lg" @click="doImport" :loading="importing">Import</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -321,6 +359,38 @@ const batchCategoryId = ref<number | null>(null)
 const batchAccountId = ref<number | null>(null)
 const batchDeleteDialog = ref(false)
 const executingBatch = ref(false)
+
+// Import dialog
+const importDialog = ref(false)
+const importFile = ref<File | null>(null)
+const importFormat = ref('csv')
+const importing = ref(false)
+
+function exportData(format: string) {
+  let url = `/api/v1/data/export.${format}`
+  if (selectedYear.value && selectedMonth.value) {
+    url += `?year=${selectedYear.value}&month=${selectedMonth.value}`
+  }
+  window.open(url, '_blank')
+}
+
+async function doImport() {
+  if (!importFile.value) return
+  importing.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', importFile.value)
+    fd.append('format', importFormat.value)
+    const resp = await api.post('/transactions/import.json', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    importDialog.value = false
+    importFile.value = null
+    console.log('Import job:', resp)
+    alert(`Import initiated. Job ID: ${resp.jobId || 'pending'}`)
+  } catch (e) { console.error('Import failed:', e) }
+  finally { importing.value = false }
+}
 
 // Delete dialog
 const deleteDialog = ref(false)
