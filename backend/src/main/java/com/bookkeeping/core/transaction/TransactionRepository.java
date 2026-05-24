@@ -92,4 +92,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                             @Param("userId") Long userId);
 
     List<Transaction> findByAccountId(Long accountId);
+
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.id IN :ids")
+    List<Transaction> findByUserIdAndIds(@Param("userId") Long userId, @Param("ids") List<Long> ids);
 }

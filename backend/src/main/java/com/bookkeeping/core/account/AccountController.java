@@ -1,6 +1,7 @@
 package com.bookkeeping.core.account;
 
 import com.bookkeeping.common.ApiResponse;
+import com.bookkeeping.core.transaction.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -8,19 +9,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST controller for account management.
- * All endpoints require authentication.
- */
 @RestController
 @RequestMapping("/api/v1/accounts")
 @Tag(name = "Accounts", description = "Account management APIs")
 public class AccountController {
 
     private final AccountService accountService;
+    private final TransactionService transactionService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, TransactionService transactionService) {
         this.accountService = accountService;
+        this.transactionService = transactionService;
     }
 
     @GetMapping
@@ -79,11 +78,52 @@ public class AccountController {
         return ApiResponse.success(null);
     }
 
+    // === Season 3 — Batch Operations ===
+
+    @PostMapping("/batch_update/category.json")
+    @Operation(summary = "Batch update category for transactions")
+    public ApiResponse<Integer> batchUpdateCategory(@RequestBody BatchUpdateCategoryRequest request) {
+        return ApiResponse.success(transactionService.batchUpdateCategory(request.transactionIds(), request.categoryId()));
+    }
+
+    @PostMapping("/batch_update/account.json")
+    @Operation(summary = "Batch update account for transactions")
+    public ApiResponse<Integer> batchUpdateAccount(@RequestBody BatchUpdateAccountRequest request) {
+        return ApiResponse.success(transactionService.batchUpdateAccount(request.transactionIds(), request.accountId()));
+    }
+
+    @PostMapping("/batch_update/tag/add.json")
+    @Operation(summary = "Batch add tags to transactions")
+    public ApiResponse<Integer> batchAddTags(@RequestBody BatchAddTagsRequest request) {
+        return ApiResponse.success(transactionService.batchAddTags(request.transactionIds(), request.tagIds()));
+    }
+
+    @PostMapping("/batch_update/tag/remove.json")
+    @Operation(summary = "Batch remove tags from transactions")
+    public ApiResponse<Integer> batchRemoveTags(@RequestBody BatchRemoveTagsRequest request) {
+        return ApiResponse.success(transactionService.batchRemoveTags(request.transactionIds(), request.tagIds()));
+    }
+
+    @PostMapping("/batch_update/tag/clear.json")
+    @Operation(summary = "Batch clear all tags from transactions")
+    public ApiResponse<Integer> batchClearTags(@RequestBody BatchClearTagsRequest request) {
+        return ApiResponse.success(transactionService.batchClearTags(request.transactionIds()));
+    }
+
+    @PostMapping("/batch_delete.json")
+    @Operation(summary = "Batch delete transactions")
+    public ApiResponse<Integer> batchDelete(@RequestBody BatchDeleteRequest request) {
+        return ApiResponse.success(transactionService.batchDelete(request.ids()));
+    }
+
     // === Request DTOs ===
 
-    /** Request to hide/unhide an account. */
     public record HideAccountRequest(long id, boolean hidden) {}
-
-    /** Request to move all transactions between accounts. */
     public record MoveTransactionsRequest(long fromAccountId, long toAccountId) {}
+    public record BatchUpdateCategoryRequest(List<Long> transactionIds, Long categoryId) {}
+    public record BatchUpdateAccountRequest(List<Long> transactionIds, Long accountId) {}
+    public record BatchAddTagsRequest(List<Long> transactionIds, List<Long> tagIds) {}
+    public record BatchRemoveTagsRequest(List<Long> transactionIds, List<Long> tagIds) {}
+    public record BatchClearTagsRequest(List<Long> transactionIds) {}
+    public record BatchDeleteRequest(List<Long> ids) {}
 }

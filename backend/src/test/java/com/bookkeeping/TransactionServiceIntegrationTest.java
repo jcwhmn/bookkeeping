@@ -237,6 +237,66 @@ public class TransactionServiceIntegrationTest {
         assertEquals(3, result.size());
     }
 
+    @Test
+    @DisplayName("TC-TXN-BATCH-001: batchUpdateCategory updates category for matching transactions")
+    void batchUpdateCategory_updatesCategory() {
+        Transaction tx1 = createTx(1L, 3, 1L, 500L, "Coffee", 1750000000L);
+        Transaction tx2 = createTx(2L, 3, 1L, 200L, "Lunch", 1750001000L);
+
+        when(transactionRepository.findByUserIdAndIds(1L, List.of(1L, 2L))).thenReturn(List.of(tx1, tx2));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        int count = transactionService.batchUpdateCategory(List.of(1L, 2L), 10L);
+
+        assertEquals(2, count);
+        verify(transactionRepository, times(2)).save(argThat(t -> t.getCategoryId().equals(10L)));
+    }
+
+    @Test
+    @DisplayName("TC-TXN-BATCH-002: batchAddTags appends new tags without duplicating")
+    void batchAddTags_appendsWithoutDuplicates() {
+        Transaction tx = createTx(1L, 3, 1L, 500L, "Coffee", 1750000000L);
+        tx = tx.toBuilder().tagIds("1,2").build().withId(1L);
+
+        when(transactionRepository.findByUserIdAndIds(1L, List.of(1L))).thenReturn(List.of(tx));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        transactionService.batchAddTags(List.of(1L), List.of(2L, 3L));
+
+        verify(transactionRepository).save(argThat(t -> {
+            String tags = t.getTagIds();
+            return tags != null && tags.contains("3") && tags.contains("1") && !tags.equals("1,1,2,3");
+        }));
+    }
+
+    @Test
+    @DisplayName("TC-TXN-BATCH-003: batchClearTags removes all tags")
+    void batchClearTags_removesAllTags() {
+        Transaction tx = createTx(1L, 3, 1L, 500L, "Coffee", 1750000000L);
+        tx = tx.toBuilder().tagIds("1,2,3").build().withId(1L);
+
+        when(transactionRepository.findByUserIdAndIds(1L, List.of(1L))).thenReturn(List.of(tx));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        transactionService.batchClearTags(List.of(1L));
+
+        verify(transactionRepository).save(argThat(t -> t.getTagIds() == null));
+    }
+
+    @Test
+    @DisplayName("TC-TXN-BATCH-004: batchDelete removes transactions and reverts balances")
+    void batchDelete_revertsBalanceAndDeletes() {
+        Transaction tx = createTx(1L, 3, 1L, 500L, "Coffee", 1750000000L);
+
+        when(transactionRepository.findByUserIdAndIds(1L, List.of(1L))).thenReturn(List.of(tx));
+        when(transactionRepository.findByIdAndUserId(1L, 1L)).thenReturn(java.util.Optional.of(tx));
+
+        transactionService.batchDelete(List.of(1L));
+
+        verify(accountService).updateBalance(eq(1L), eq(500L));  // revert expense = add back
+        verify(transactionRepository, atLeast(1)).delete(any(Transaction.class));
+    }
+
     private Transaction createTx(Long id, int type, Long accountId, Long amount, String desc, Long time) {
         return Transaction.builder()
                 .transactionType(type)

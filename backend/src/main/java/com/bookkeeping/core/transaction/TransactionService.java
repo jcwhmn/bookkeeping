@@ -302,4 +302,93 @@ public class TransactionService {
             default -> 0L;
         };
     }
+
+    // === Batch Operations ===
+
+    @Transactional
+    public int batchUpdateCategory(List<Long> ids, Long categoryId) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdAndIds(userId, ids);
+        for (Transaction tx : txs) {
+            transactionRepository.save(tx.toBuilder().categoryId(categoryId).build());
+        }
+        return txs.size();
+    }
+
+    @Transactional
+    public int batchUpdateAccount(List<Long> ids, Long accountId) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdAndIds(userId, ids);
+        for (Transaction tx : txs) {
+            // Revert balance on old account, apply to new
+            Long change = calculateBalanceChange(tx.getTransactionType(), tx.getAmount());
+            accountService.updateBalance(tx.getAccountId(), -change);
+            accountService.updateBalance(accountId, change);
+            transactionRepository.save(tx.toBuilder().accountId(accountId).build());
+        }
+        return txs.size();
+    }
+
+    @Transactional
+    public int batchAddTags(List<Long> ids, List<Long> tagIdsToAdd) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdAndIds(userId, ids);
+        for (Transaction tx : txs) {
+            String existing = tx.getTagIds();
+            List<Long> merged = parseTagIds(existing);
+            for (Long tagId : tagIdsToAdd) {
+                if (!merged.contains(tagId)) merged.add(tagId);
+            }
+            transactionRepository.save(tx.toBuilder().tagIds(serializeTagIds(merged)).build());
+        }
+        return txs.size();
+    }
+
+    @Transactional
+    public int batchRemoveTags(List<Long> ids, List<Long> tagIdsToRemove) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdAndIds(userId, ids);
+        for (Transaction tx : txs) {
+            List<Long> current = parseTagIds(tx.getTagIds());
+            current.removeAll(tagIdsToRemove);
+            transactionRepository.save(tx.toBuilder().tagIds(serializeTagIds(current)).build());
+        }
+        return txs.size();
+    }
+
+    @Transactional
+    public int batchClearTags(List<Long> ids) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdAndIds(userId, ids);
+        for (Transaction tx : txs) {
+            transactionRepository.save(tx.toBuilder().tagIds(null).build());
+        }
+        return txs.size();
+    }
+
+    @Transactional
+    public int batchDelete(List<Long> ids) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdAndIds(userId, ids);
+        for (Transaction tx : txs) {
+            deleteTransaction(tx.getId());  // re-use existing logic
+        }
+        return txs.size();
+    }
+
+    // === Tag ID Helpers ===
+
+    private List<Long> parseTagIds(String tagIds) {
+        if (tagIds == null || tagIds.isBlank()) return new java.util.ArrayList<>();
+        return java.util.Arrays.stream(tagIds.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+    }
+
+    private String serializeTagIds(List<Long> tagIds) {
+        if (tagIds == null || tagIds.isEmpty()) return null;
+        return String.join(",", tagIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.toList()));
+    }
 }
