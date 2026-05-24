@@ -24,4 +24,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     @Modifying
     @Query("UPDATE Category c SET c.hidden = :hidden WHERE c.id = :id AND c.userId = :userId")
     int updateHidden(@Param("id") Long id, @Param("userId") Long userId, @Param("hidden") Boolean hidden);
+
+    @Modifying
+    @Query("DELETE FROM Category c WHERE c.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }

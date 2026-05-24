@@ -34,4 +34,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     int updateHidden(@Param("id") Long id, @Param("userId") Long userId, @Param("hidden") Boolean hidden);
 
     long countByUserId(Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Account a WHERE a.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }

@@ -24,4 +24,8 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     int updateHidden(@Param("id") Long id, @Param("userId") Long userId, @Param("hidden") Boolean hidden);
 
     List<Tag> findByUserId(Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Tag t WHERE t.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }

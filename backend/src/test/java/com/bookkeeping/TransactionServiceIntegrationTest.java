@@ -134,7 +134,7 @@ public class TransactionServiceIntegrationTest {
     @Test
     @DisplayName("TC-TXN-SEARCH-001: searchTransactions uses DB-level filtering when filters present")
     void searchTransactions_withFilters_usesFindWithFilters() {
-        TransactionSearchParams params = new TransactionSearchParams(2026, 5, 1, 2, 3, "coffee");
+        TransactionSearchParams params = new TransactionSearchParams(2026, 5, 1, 2, 3, "coffee", null, null, null, null, null);
         List<Transaction> mockResults = List.of(
             createTx(1L, 3, 1L, 500L, "coffee beans", 1750000000L));
 
@@ -200,7 +200,7 @@ public class TransactionServiceIntegrationTest {
     @Test
     @DisplayName("TC-TXN-COUNT-001: countTransactions with filters uses countWithFilters")
     void countTransactions_withFilters_usesCountWithFilters() {
-        TransactionSearchParams params = new TransactionSearchParams(2026, 5, 1, null, null, null);
+        TransactionSearchParams params = new TransactionSearchParams(2026, 5, 1, null, null, null, null, null, null, null, null);
 
         when(transactionRepository.countWithFilters(
                 eq(1L), eq(2026), eq(5), eq(1L), isNull(), isNull(), isNull()))

@@ -38,7 +38,7 @@ public class TransactionController {
             @RequestParam(required = false) Integer transactionType,
             @RequestParam(required = false) String search) {
         return ApiResponse.success(transactionService.searchTransactions(
-                new TransactionSearchParams(year, month, accountId, categoryId, transactionType, search), limit));
+                new TransactionSearchParams(year, month, accountId, categoryId, transactionType, search, null, null, null, null, null), limit));
     }
 
     /**
@@ -100,7 +100,7 @@ public class TransactionController {
             @RequestParam(required = false) Integer transactionType,
             @RequestParam(required = false) String search) {
         return ApiResponse.success(transactionService.countTransactions(
-                new TransactionSearchParams(year, month, accountId, categoryId, transactionType, search)));
+                new TransactionSearchParams(year, month, accountId, categoryId, transactionType, search, null, null, null, null, null)));
     }
 
     // === Statistics ===
@@ -122,7 +122,7 @@ public class TransactionController {
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer accountId) {
         List<TransactionDto> transactions = transactionService.searchTransactions(
-                new TransactionSearchParams(year, month, accountId, null, null, null), 10000);
+                new TransactionSearchParams(year, month, accountId, null, null, null, null, null, null, null, null), 10000);
 
         StringBuilder csv = new StringBuilder();
         csv.append("ID,Type,Account,Category,Amount,Description,Date,Tags\n");

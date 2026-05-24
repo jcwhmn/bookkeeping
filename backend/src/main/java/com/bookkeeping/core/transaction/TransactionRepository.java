@@ -96,6 +96,23 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.id IN :ids")
     List<Transaction> findByUserIdAndIds(@Param("userId") Long userId, @Param("ids") List<Long> ids);
 
+    @Modifying
+    @Query("DELETE FROM Transaction t WHERE t.userId = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Transaction t WHERE t.accountId = :accountId AND t.userId = :userId")
+    void deleteByAccountIdAndUserId(@Param("accountId") Long accountId, @Param("userId") Long userId);
+
+    default List<Transaction> searchWithFilters(Long userId, TransactionSearchParams params) {
+        return findWithFilters(userId, params.year(), params.month(),
+                params.accountId() != null ? params.accountId().longValue() : null,
+                params.categoryId() != null ? params.categoryId().longValue() : null,
+                params.transactionType(),
+                params.search(),
+                org.springframework.data.domain.Pageable.unpaged());
+    }
+
     @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
            "AND (:startTime IS NULL OR t.transactionTime >= :startTime) " +
            "AND (:endTime IS NULL OR t.transactionTime < :endTime) " +
