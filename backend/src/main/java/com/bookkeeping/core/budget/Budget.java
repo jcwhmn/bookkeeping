@@ -25,11 +25,11 @@ public class Budget {
     @Column(nullable = false)
     private Long amount;
     
-    @Column(nullable = false)
-    private Integer year;
+    @Column(name = "budget_year", nullable = false)
+    private Integer budgetYear;
     
-    @Column(nullable = false)
-    private Integer month;
+    @Column(name = "budget_month", nullable = false)
+    private Integer budgetMonth;
     
     @Column(name = "created_unix_time", nullable = false)
     private Long createdTime;

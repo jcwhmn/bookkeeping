@@ -27,14 +27,14 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryDto> getCurrentUserCategories() {
         Long userId = securityUtils.requireCurrentUser().getId();
-        return categoryRepository.findByUserId(userId).stream()
+        return categoryRepository.findByUserIdOrderBySortOrderAsc(userId).stream()
                 .map(categoryMapper::toDto).toList();
     }
 
     @Transactional(readOnly = true)
     public List<CategoryDto> getCategoriesByType(CategoryType type) {
         Long userId = securityUtils.requireCurrentUser().getId();
-        return categoryRepository.findByUserIdAndCategoryType(userId, type).stream()
+        return categoryRepository.findByUserIdAndCategoryTypeOrderBySortOrderAsc(userId, type).stream()
                 .map(categoryMapper::toDto).toList();
     }
 
@@ -49,6 +49,8 @@ public class CategoryService {
                 .categoryType(type)
                 .userId(userId)
                 .parentId(parentId)
+                .sortOrder(0)
+                .hidden(false)
                 .build();
         return categoryMapper.toDto(categoryRepository.save(category));
     }
@@ -57,4 +59,38 @@ public class CategoryService {
     public Optional<CategoryDto> getCategoryById(Long id) {
         return categoryRepository.findById(id).map(categoryMapper::toDto);
     }
+
+    @Transactional
+    public void hideCategory(Long id, boolean hidden) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        Category category = categoryRepository.findByIdAndUserId(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.CATEGORY_NOT_FOUND, "Category not found"));
+        categoryRepository.save(category.toBuilder().hidden(hidden).build());
+    }
+
+    @Transactional
+    public void reorderCategories(List<Long> orderedIds) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        for (int i = 0; i < orderedIds.size(); i++) {
+            categoryRepository.updateSortOrder(orderedIds.get(i), userId, i);
+        }
+    }
+
+    @Transactional
+    public List<CategoryDto> batchCreate(List<BatchCreateItem> items) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        return items.stream().map(item -> {
+            Category category = Category.builder()
+                    .name(item.name())
+                    .categoryType(item.categoryType())
+                    .userId(userId)
+                    .parentId(item.parentId())
+                    .sortOrder(0)
+                    .hidden(false)
+                    .build();
+            return categoryMapper.toDto(categoryRepository.save(category));
+        }).toList();
+    }
+
+    public record BatchCreateItem(String name, CategoryType categoryType, Long parentId) {}
 }

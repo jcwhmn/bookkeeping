@@ -33,7 +33,7 @@ public class BudgetService {
     @Transactional(readOnly = true)
     public List<BudgetDto> getBudgets(int year, int month) {
         Long userId = securityUtils.requireCurrentUser().getId();
-        List<Budget> budgets = budgetRepository.findByUserIdAndYearAndMonth(userId, year, month);
+        List<Budget> budgets = budgetRepository.findByUserIdAndBudgetYearAndBudgetMonth(userId, year, month);
         return budgets.stream().map(b -> toDtoWithSpent(b, userId)).toList();
     }
 
@@ -42,7 +42,7 @@ public class BudgetService {
         Long userId = securityUtils.requireCurrentUser().getId();
 
         // Check for duplicate
-        if (budgetRepository.findByUserIdAndCategoryIdAndYearAndMonth(
+        if (budgetRepository.findByUserIdAndCategoryIdAndBudgetYearAndBudgetMonth(
                 userId, request.categoryId(), request.year(), request.month()).isPresent()) {
             throw new BusinessException(ResultCode.VALIDATION_ERROR, "Budget already exists for this category and month");
         }
@@ -51,8 +51,8 @@ public class BudgetService {
                 .userId(userId)
                 .categoryId(request.categoryId())
                 .amount(request.amount())
-                .year(request.year())
-                .month(request.month())
+                .budgetYear(request.year())
+                .budgetMonth(request.month())
                 .createdTime(System.currentTimeMillis() / 1000)
                 .build();
 
@@ -91,7 +91,7 @@ public class BudgetService {
                 .orElse("Unknown");
 
         // Calculate spent amount for this category in this month
-        LocalDate startDate = LocalDate.of(budget.getYear(), budget.getMonth(), 1);
+        LocalDate startDate = LocalDate.of(budget.getBudgetYear(), budget.getBudgetMonth(), 1);
         LocalDate endDate = startDate.plusMonths(1);
         long startTime = startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
         long endTime = endDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
@@ -109,7 +109,7 @@ public class BudgetService {
 
         double percentUsed = budget.getAmount() > 0 ? (spent * 100.0 / budget.getAmount()) : 0;
 
-        return new BudgetDto(budget.getId(), budget.getCategoryId(), categoryName, 
-                budget.getAmount(), budget.getYear(), budget.getMonth(), spent, percentUsed);
+        return new BudgetDto(budget.getId(), budget.getCategoryId(), categoryName,
+                budget.getAmount(), budget.getBudgetYear(), budget.getBudgetMonth(), spent, percentUsed);
     }
 }

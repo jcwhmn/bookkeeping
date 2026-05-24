@@ -94,7 +94,7 @@ public class DataInitializer implements CommandLineRunner {
     private List<Category> createDemoCategories(User demoUser) {
         if (categoryRepository.count() > 0) {
             log.info("Categories already exist");
-            return categoryRepository.findByUserId(demoUser.getId());
+            return categoryRepository.findByUserIdOrderBySortOrderAsc(demoUser.getId());
         }
         // Income categories
         createCategory(demoUser, "Salary", CategoryType.INCOME);
@@ -111,7 +111,7 @@ public class DataInitializer implements CommandLineRunner {
         createCategory(demoUser, "Utilities", CategoryType.EXPENSE);
         createCategory(demoUser, "Other Expense", CategoryType.EXPENSE);
         log.info("✓ 12 demo categories created");
-        return categoryRepository.findByUserId(demoUser.getId());
+        return categoryRepository.findByUserIdOrderBySortOrderAsc(demoUser.getId());
     }
 
     private void createDemoTransactions(User demoUser, List<Account> accounts, List<Category> categories) {
@@ -165,6 +165,8 @@ public class DataInitializer implements CommandLineRunner {
                 .name(name)
                 .categoryType(type)
                 .userId(user.getId())
+                .sortOrder(0)
+                .hidden(false)
                 .build();
         categoryRepository.save(c);
     }

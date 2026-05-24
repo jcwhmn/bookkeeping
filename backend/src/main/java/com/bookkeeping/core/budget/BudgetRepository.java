@@ -10,12 +10,13 @@ import java.util.Optional;
 
 @Repository
 public interface BudgetRepository extends JpaRepository<Budget, Long> {
-    List<Budget> findByUserIdAndYearAndMonth(Long userId, Integer year, Integer month);
-    
+    List<Budget> findByUserIdAndBudgetYearAndBudgetMonth(Long userId, Integer budgetYear, Integer budgetMonth);
+
     Optional<Budget> findByIdAndUserId(Long id, Long userId);
-    
-    Optional<Budget> findByUserIdAndCategoryIdAndYearAndMonth(Long userId, Long categoryId, Integer year, Integer month);
-    
-    @Query("SELECT b FROM Budget b WHERE b.userId = :userId AND b.year = :year AND b.month = :month AND b.categoryId = :categoryId AND b.id != :excludeId")
+
+    Optional<Budget> findByUserIdAndCategoryIdAndBudgetYearAndBudgetMonth(
+            Long userId, Long categoryId, Integer budgetYear, Integer budgetMonth);
+
+    @Query("SELECT b FROM Budget b WHERE b.userId = :userId AND b.budgetYear = :year AND b.budgetMonth = :month AND b.categoryId = :categoryId AND b.id != :excludeId")
     Optional<Budget> findDuplicate(Long userId, Long categoryId, Integer year, Integer month, Long excludeId);
 }

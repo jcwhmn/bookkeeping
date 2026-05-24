@@ -3,11 +3,7 @@ package com.bookkeeping.core.category;
 import com.bookkeeping.common.BaseEntity;
 import com.bookkeeping.common.enums.CategoryType;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "categories")
@@ -32,4 +28,7 @@ public class Category extends BaseEntity {
 
     @Column
     private Integer sortOrder = 0;
+
+    @Column(nullable = false)
+    private Boolean hidden = false;
 }

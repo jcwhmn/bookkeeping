@@ -11,5 +11,6 @@ public record CategoryDto(
     CategoryType categoryType,
     Long userId,
     Long parentId,
-    Integer sortOrder
+    Integer sortOrder,
+    Boolean hidden
 ) {}
