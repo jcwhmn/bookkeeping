@@ -18,6 +18,13 @@
       <v-btn variant="text" to="/reports" active-class="text-primary" class="text-none">Reports</v-btn>
       <v-btn variant="text" to="/exchange" active-class="text-primary" class="text-none">Exchange</v-btn>
       <v-btn variant="text" to="/insights" active-class="text-primary" class="text-none">Insights</v-btn>
+      <v-btn variant="text" to="/about" active-class="text-primary" class="text-none">About</v-btn>
+
+      <v-spacer />
+
+      <v-btn variant="text" size="small" class="text-none text-grey-darken-1 mr-2" to="/app-settings">
+        <v-icon start size="18">mdi-cog-outline</v-icon>Settings
+      </v-btn>
 
       <v-spacer />
 
