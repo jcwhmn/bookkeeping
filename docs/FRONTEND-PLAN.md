@@ -18,11 +18,17 @@
 7. [x] `pages/exchange.vue` — Exchange rates with base currency, custom rates
 8. [x] `pages/transactions.vue` — Export dropdown (CSV/TSV), import dialog
 
+### Sprint 5: 2FA + Insights + LLM
+9. [x] `pages/profile.vue` — 2FA setup with QR/secret, recovery codes, OAuth2 connect
+10. [x] `pages/insights.vue` — Query builder, chart/table views, save/load/hide/delete queries
+11. [x] `pages/transactions.vue` — AI Scan button + LLM receipt dialog
+
 ## Summary
-- **15 Vue pages** (was 13, added templates + exchange)
-- **Enhanced 6 pages**: profile, tags, transactions, statistics, reports, transactions
+- **16 Vue pages** (was 13, added templates + exchange + insights)
+- **Enhanced 8 pages**: profile (2FA/OAuth), tags, transactions (batch/import/export/LLM), statistics, reports
 - **Batch operations**: checkbox multi-select, batch dialogs, batch delete
 - **3-mode statistics**: categorical, trends, asset trends
 - **3-tab reports**: summary, cash flow, reconciliation
-- **Import/Export**: dropdown + dialog in transactions page
-- **Exchange rates**: base currency, custom rates, quick reference
+- **2FA**: setup dialog with QR, confirmation, recovery codes
+- **Insights Explorer**: 5 dimensions, filters, chart/table, save/load
+- **LLM**: receipt scan button + dialog in transactions
