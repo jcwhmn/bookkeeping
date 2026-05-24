@@ -41,6 +41,9 @@
         <v-btn icon="mdi-chevron-right" variant="text" size="small" @click="nextMonth" :disabled="!canGoNext" />
       </div>
       <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate()">Add</v-btn>
+      <v-btn variant="outlined" prepend-icon="mdi-robot" class="ml-2" @click="showLLMDialog = true" title="AI Receipt Recognition">
+        AI Scan
+      </v-btn>
       <v-menu>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" variant="outlined" prepend-icon="mdi-export" class="ml-2">
@@ -328,6 +331,50 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- LLM Receipt Scan Dialog -->
+    <v-dialog v-model="showLLMDialog" max-width="500">
+      <v-card class="rounded-lg">
+        <v-card-title class="d-flex align-center">
+          <v-icon color="primary" class="mr-2">mdi-robot</v-icon>
+          AI Receipt Recognition
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showLLMDialog = false" />
+        </v-card-title>
+        <v-card-text>
+          <v-alert type="info" variant="tonal" class="mb-4 rounded-lg">
+            Upload a receipt image and our AI will extract transaction details automatically.
+          </v-alert>
+          <v-file-input
+            v-model="llmFile"
+            label="Receipt Image"
+            variant="outlined"
+            density="comfortable"
+            accept="image/*"
+            prepend-icon="mdi-camera"
+            class="mb-3"
+          />
+          <div v-if="llmResult" class="mt-4">
+            <v-divider class="mb-4" />
+            <div class="text-subtitle-2 font-weight-bold mb-2">Recognized Data:</div>
+            <div class="text-body-2 mb-1"><strong>Type:</strong> {{ llmResult.transactionType === 2 ? 'Income' : 'Expense' }}</div>
+            <div class="text-body-2 mb-1"><strong>Amount:</strong> ${{ llmResult.amountStr || 'N/A' }}</div>
+            <div class="text-body-2 mb-1"><strong>Description:</strong> {{ llmResult.description || 'N/A' }}</div>
+            <div class="text-body-2 mb-1"><strong>Date:</strong> {{ llmResult.dateStr || 'N/A' }}</div>
+          </div>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="text" @click="showLLMDialog = false">Cancel</v-btn>
+          <v-btn color="primary" @click="scanReceipt" :loading="llmLoading" :disabled="!llmFile">
+            <v-icon start>mdi-robot</v-icon> Scan Receipt
+          </v-btn>
+          <v-btn v-if="llmResult" color="success" @click="applyLLMResult">
+            Apply to Form
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -366,6 +413,12 @@ const importFile = ref<File | null>(null)
 const importFormat = ref('csv')
 const importing = ref(false)
 
+// LLM dialog
+const showLLMDialog = ref(false)
+const llmFile = ref<File | null>(null)
+const llmResult = ref<any>(null)
+const llmLoading = ref(false)
+
 function exportData(format: string) {
   let url = `/api/v1/data/export.${format}`
   if (selectedYear.value && selectedMonth.value) {
@@ -390,6 +443,35 @@ async function doImport() {
     alert(`Import initiated. Job ID: ${resp.jobId || 'pending'}`)
   } catch (e) { console.error('Import failed:', e) }
   finally { importing.value = false }
+}
+
+async function scanReceipt() {
+  if (!llmFile.value) return
+  llmLoading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('picture', llmFile.value)
+    const resp = await api.post('/llm/transactions/recognize_receipt_image.json', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (resp.status === 'not_configured') {
+      alert('LLM provider not configured. Please set up your LLM API key in application settings.')
+    } else {
+      llmResult.value = resp
+    }
+  } catch (e) { console.error('LLM scan failed:', e) }
+  finally { llmLoading.value = false }
+}
+
+function applyLLMResult() {
+  if (!llmResult.value) return
+  // Pre-fill form with recognized data
+  openCreate()
+  if (llmResult.value.transactionType) form.transactionType = llmResult.value.transactionType
+  if (llmResult.value.amountStr) amountStr.value = llmResult.value.amountStr
+  if (llmResult.value.description) form.description = llmResult.value.description
+  if (llmResult.value.dateStr) form.date = llmResult.value.dateStr
+  showLLMDialog.value = false
 }
 
 // Delete dialog

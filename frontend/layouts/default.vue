@@ -17,6 +17,7 @@
       <v-btn variant="text" to="/templates" active-class="text-primary" class="text-none">Templates</v-btn>
       <v-btn variant="text" to="/reports" active-class="text-primary" class="text-none">Reports</v-btn>
       <v-btn variant="text" to="/exchange" active-class="text-primary" class="text-none">Exchange</v-btn>
+      <v-btn variant="text" to="/insights" active-class="text-primary" class="text-none">Insights</v-btn>
 
       <v-spacer />
 

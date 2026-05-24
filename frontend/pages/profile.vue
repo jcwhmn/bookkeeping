@@ -105,17 +105,25 @@
         <v-btn :color="user?.twoFactorEnabled ? 'error' : 'primary'" variant="outlined" @click="toggle2FA">
           {{ user?.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA' }}
         </v-btn>
+        <div v-if="user?.twoFactorEnabled" class="mt-2">
+          <v-btn variant="text" size="small" @click="showRecoveryCodes = true">View Recovery Codes</v-btn>
+        </div>
 
         <v-divider class="my-4" />
 
         <div class="text-subtitle-1 font-weight-bold mb-4">OAuth2 Connections</div>
-        <div class="text-body-2 text-grey mb-3">Manage your linked third-party accounts</div>
-        <v-chip v-if="false" color="success" class="mr-2">Google</v-chip>
-        <v-chip v-if="false" color="grey">GitHub</v-chip>
-        <v-alert v-if="oauthConnections.length === 0" type="info" variant="tonal" class="mt-2 rounded-lg">
+        <div class="d-flex flex-wrap ga-2 mb-3">
+          <v-chip v-if="oauthConnections.includes('google')" color="success" class="mr-2">
+            <v-icon start size="small">mdi-google</v-icon> Google
+          </v-chip>
+          <v-chip v-if="oauthConnections.includes('github')" color="grey">
+            <v-icon start size="small">mdi-github</v-icon> GitHub
+          </v-chip>
+        </div>
+        <v-alert v-if="oauthConnections.length === 0" type="info" variant="tonal" class="mb-3 rounded-lg">
           No OAuth2 connections. Link your account with Google or GitHub for easier login.
         </v-alert>
-        <v-btn variant="outlined" class="mt-3" @click="showOAuthDialog = true">Connect OAuth2</v-btn>
+        <v-btn variant="outlined" @click="showOAuthDialog = true">Connect OAuth2</v-btn>
       </v-card-text>
     </v-card>
 
@@ -280,6 +288,112 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 2FA Setup Dialog -->
+    <v-dialog v-model="show2FADialog" max-width="450">
+      <v-card class="rounded-lg">
+        <v-card-title class="d-flex align-center">
+          <v-icon color="primary" class="mr-2">mdi-shield-lock</v-icon>
+          Enable Two-Factor Authentication
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="show2FADialog = false" />
+        </v-card-title>
+        <v-card-text>
+          <v-alert type="info" variant="tonal" class="mb-4 rounded-lg">
+            Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
+          </v-alert>
+          <div class="text-center mb-4">
+            <img v-if="twoFAQrCode" :src="twoFAQrCode" alt="2FA QR Code" style="max-width: 200px; border: 1px solid #eee; border-radius: 8px;" />
+            <div v-else class="pa-4 text-grey">Loading QR code...</div>
+          </div>
+          <div class="mb-4">
+            <div class="text-caption text-grey mb-1">Manual entry key:</div>
+            <code class="text-body-2" style="word-break: break-all; background: #f5f5f5; padding: 8px; border-radius: 4px;">{{ twoFASecret }}</code>
+          </div>
+          <v-text-field
+            v-model="twoFACode"
+            label="Verification Code"
+            placeholder="Enter 6-digit code"
+            variant="outlined"
+            density="comfortable"
+            maxlength="6"
+            class="mb-2"
+          />
+          <div class="text-caption text-grey">Enter the 6-digit code from your authenticator app</div>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="text" @click="show2FADialog = false">Cancel</v-btn>
+          <v-btn color="primary" @click="confirm2FA" :loading="changing" :disabled="twoFACode.length < 6">
+            Verify & Enable
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Recovery Codes Dialog -->
+    <v-dialog v-model="showRecoveryDialog" max-width="500">
+      <v-card class="rounded-lg">
+        <v-card-title class="d-flex align-center">
+          <v-icon color="warning" class="mr-2">mdi-key-variant</v-icon>
+          Recovery Codes
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="showRecoveryDialog = false" />
+        </v-card-title>
+        <v-card-text>
+          <v-alert type="warning" variant="tonal" class="mb-4 rounded-lg">
+            <strong>Save these codes!</strong> Store them securely. Each code can only be used once if you lose access to your authenticator.
+          </v-alert>
+          <v-textarea
+            :model-value="recoveryCodes.join('\n')"
+            readonly
+            variant="outlined"
+            rows="6"
+            class="font-mono"
+          />
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-btn variant="text" @click="copyRecoveryCodes">Copy to Clipboard</v-btn>
+          <v-spacer />
+          <v-btn color="primary" @click="showRecoveryDialog = false">Done</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- OAuth Connect Dialog -->
+    <v-dialog v-model="showOAuthDialog" max-width="400">
+      <v-card class="rounded-lg">
+        <v-card-title>Connect OAuth2</v-card-title>
+        <v-card-text>
+          <v-alert type="info" variant="tonal" class="mb-4 rounded-lg">
+            Link your account with a third-party provider for easier login.
+          </v-alert>
+          <v-btn
+            block
+            variant="outlined"
+            color="#4285F4"
+            class="mb-2"
+            prepend-icon="mdi-google"
+            @click="connectOAuth('google')"
+          >
+            Connect Google
+          </v-btn>
+          <v-btn
+            block
+            variant="outlined"
+            class="mb-2"
+            prepend-icon="mdi-github"
+            @click="connectOAuth('github')"
+          >
+            Connect GitHub
+          </v-btn>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showOAuthDialog = false">Cancel</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -334,6 +448,14 @@ const clearPassword = ref('')
 const showOAuthDialog = ref(false)
 const oauthConnections = ref<string[]>([])
 
+// 2FA
+const show2FADialog = ref(false)
+const showRecoveryDialog = ref(false)
+const twoFASecret = ref('')
+const twoFAQrCode = ref('')
+const twoFACode = ref('')
+const recoveryCodes = ref<string[]>([])
+
 const accountOptions = computed(() => accounts.value.map(a => ({ title: a.name, value: a.id })))
 const editScopeOptions = [
   { title: 'No Restriction', value: 0 },
@@ -385,6 +507,45 @@ async function fetchData() {
   } catch (e) {
     console.error('Failed to fetch profile:', e)
   } finally { loading.value = false }
+}
+
+async function enable2FA() {
+  show2FADialog.value = true
+  try {
+    const resp = await api.get<{secret: string; qrCode: string}>('/users/2fa/setup.json')
+    twoFASecret.value = resp.secret
+    twoFAQrCode.value = resp.qrCode
+  } catch (e) { console.error('2FA setup failed:', e) }
+}
+
+async function confirm2FA() {
+  try {
+    await api.post('/users/2fa/enable.json', { code: twoFACode.value })
+    show2FADialog.value = false
+    twoFACode.value = ''
+    await auth.fetchCurrentUser()
+    showSnackbar('2FA enabled successfully')
+  } catch (e) { console.error('2FA confirmation failed:', e) }
+}
+
+async function disable2FA() {
+  try {
+    await api.post('/users/2fa/disable.json', { password: '' })
+    await auth.fetchCurrentUser()
+    showSnackbar('2FA disabled')
+  } catch (e) { console.error('2FA disable failed:', e) }
+}
+
+async function showRecoveryCodes() {
+  try {
+    const codes = await api.get<string[]>('/users/2fa/recovery_codes.json')
+    recoveryCodes.value = codes
+    showRecoveryDialog.value = true
+  } catch (e) { console.error('Recovery codes failed:', e) }
+}
+
+async function connectOAuth(provider: string) {
+  window.location.href = `/oauth2/login?platform=${provider}&client_session_id=${Date.now()}`
 }
 
 async function saveProfile() {
@@ -443,8 +604,13 @@ async function changePassword() {
 }
 
 async function toggle2FA() {
-  // Stub: would call 2FA enable/disable API
-  showSnackbar('2FA toggle not implemented yet')
+  if (user.value?.twoFactorEnabled) {
+    if (confirm('Are you sure you want to disable 2FA?')) {
+      await disable2FA()
+    }
+  } else {
+    await enable2FA()
+  }
 }
 
 async function fetchTokens() {
@@ -505,6 +671,16 @@ function exportData(format: string) {
 function showSnackbar(msg: string) {
   // Would use Vuetify snackbar in real app
   console.log(msg)
+}
+
+function copyRecoveryCodes() {
+  navigator.clipboard.writeText(recoveryCodes.value.join('\n'))
+  showSnackbar('Recovery codes copied')
+}
+
+function copyOAuthToken(token: string) {
+  navigator.clipboard.writeText(token)
+  showSnackbar('Token copied')
 }
 
 onMounted(async () => {
