@@ -43,6 +43,27 @@
       <v-btn color="primary" prepend-icon="mdi-plus" rounded="lg" @click="openCreate()">Add</v-btn>
     </div>
 
+    <!-- Batch Actions Bar -->
+    <v-card v-if="selectedIds.length > 0" class="mb-4 pa-3 rounded-lg" elevation="2" color="primary-lighten-5">
+      <div class="d-flex align-center">
+        <span class="text-body-2 font-weight-medium mr-3">{{ selectedIds.length }} selected</span>
+        <v-btn size="small" variant="outlined" class="mr-2" @click="showBatchDialog('category')">
+          <v-icon start size="16">mdi-tag-outline</v-icon> Change Category
+        </v-btn>
+        <v-btn size="small" variant="outlined" class="mr-2" @click="showBatchDialog('account')">
+          <v-icon start size="16">mdi-bank</v-icon> Change Account
+        </v-btn>
+        <v-btn size="small" variant="outlined" class="mr-2" @click="showBatchDialog('tag')">
+          <v-icon start size="16">mdi-tag-multiple</v-icon> Edit Tags
+        </v-btn>
+        <v-btn size="small" variant="outlined" color="error" @click="confirmBatchDelete">
+          <v-icon start size="16">mdi-delete</v-icon> Delete
+        </v-btn>
+        <v-spacer />
+        <v-btn size="small" variant="text" @click="selectedIds = []">Clear</v-btn>
+      </div>
+    </v-card>
+
     <!-- Filter Bar -->
     <v-card class="mb-4 pa-3 rounded-lg" elevation="1">
       <v-row dense align="center">
@@ -95,6 +116,13 @@
             style="cursor: pointer;"
           >
             <template v-slot:prepend>
+              <v-checkbox
+                :model-value="selectedIds.includes(tx.id)"
+                @update:model-value="toggleSelect(tx.id)"
+                @click.stop
+                hide-details
+                class="mr-2"
+              />
               <v-avatar :color="typeColor(tx.transactionType)" size="40" class="mr-3">
                 <v-icon color="white" size="20">{{ typeIcon(tx.transactionType) }}</v-icon>
               </v-avatar>
@@ -221,6 +249,47 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Batch Operation Dialog -->
+    <v-dialog v-model="batchDialog" max-width="400">
+      <v-card class="rounded-lg">
+        <v-card-title class="d-flex align-center">
+          {{ batchAction === 'category' ? 'Change Category' : batchAction === 'account' ? 'Change Account' : 'Edit Tags' }}
+          <v-spacer />
+          <v-btn icon="mdi-close" variant="text" size="small" @click="batchDialog = false" />
+        </v-card-title>
+        <v-card-text>
+          <v-select v-if="batchAction === 'category'" v-model="batchCategoryId" :items="categoryOptions" label="New Category" variant="outlined" density="comfortable" class="mb-3" />
+          <v-select v-if="batchAction === 'account'" v-model="batchAccountId" :items="accountOptions" label="New Account" variant="outlined" density="comfortable" class="mb-3" />
+          <div v-if="batchAction === 'tag'" class="text-body-2 text-grey">Tag editing for selected transactions coming soon.</div>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="text" @click="batchDialog = false">Cancel</v-btn>
+          <v-btn color="primary" rounded="lg" @click="executeBatch" :loading="executingBatch">Apply to {{ selectedIds.length }} transactions</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Batch Delete Confirmation -->
+    <v-dialog v-model="batchDeleteDialog" max-width="400">
+      <v-card class="rounded-lg">
+        <v-card-title class="text-error">
+          <v-icon color="error" class="mr-2">mdi-alert-circle</v-icon>
+          Delete {{ selectedIds.length }} Transactions?
+        </v-card-title>
+        <v-card-text>
+          <v-alert type="warning" variant="tonal" class="rounded-lg">
+            This will permanently delete {{ selectedIds.length }} transactions. This action cannot be undone.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-spacer />
+          <v-btn variant="text" @click="batchDeleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" rounded="lg" @click="doBatchDelete" :loading="deleting">Delete All</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -241,6 +310,17 @@ const saving = ref(false)
 const editingTx = ref<Tx | null>(null)
 const amountStr = ref('')
 const required = (v: any) => !!v || 'Required'
+
+// Batch selection
+const selectedIds = ref<number[]>([])
+
+// Batch dialog
+const batchDialog = ref(false)
+const batchAction = ref('')
+const batchCategoryId = ref<number | null>(null)
+const batchAccountId = ref<number | null>(null)
+const batchDeleteDialog = ref(false)
+const executingBatch = ref(false)
 
 // Delete dialog
 const deleteDialog = ref(false)
@@ -488,6 +568,50 @@ async function save() {
     dialog.value = false
     await fetchData()
   } finally { saving.value = false }
+}
+
+// Batch operations
+function toggleSelect(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx >= 0) selectedIds.value.splice(idx, 1)
+  else selectedIds.value.push(id)
+}
+
+function showBatchDialog(action: string) {
+  batchAction.value = action
+  batchCategoryId.value = null
+  batchAccountId.value = null
+  batchDialog.value = true
+}
+
+async function executeBatch() {
+  executingBatch.value = true
+  try {
+    if (batchAction.value === 'category' && batchCategoryId.value) {
+      await api.post('/transactions/batch_update/category.json', { transactionIds: selectedIds.value, categoryId: batchCategoryId.value })
+    } else if (batchAction.value === 'account' && batchAccountId.value) {
+      await api.post('/transactions/batch_update/account.json', { transactionIds: selectedIds.value, accountId: batchAccountId.value })
+    }
+    batchDialog.value = false
+    selectedIds.value = []
+    await fetchData()
+  } catch (e) { console.error('Batch update failed:', e) }
+  finally { executingBatch.value = false }
+}
+
+function confirmBatchDelete() {
+  batchDeleteDialog.value = true
+}
+
+async function doBatchDelete() {
+  deleting.value = true
+  try {
+    await api.post('/transactions/batch_delete.json', { transactionIds: selectedIds.value })
+    batchDeleteDialog.value = false
+    selectedIds.value = []
+    await fetchData()
+  } catch (e) { console.error('Batch delete failed:', e) }
+  finally { deleting.value = false }
 }
 
 onMounted(fetchData)
