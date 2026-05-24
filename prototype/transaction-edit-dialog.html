@@ -1,0 +1,1028 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Transaction</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: rgba(0, 0, 0, 0.5);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Edit Transaction Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24);
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #E0E0E0;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111111;
+    }
+
+    .close-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666666;
+      transition: background 0.2s;
+    }
+
+    .close-btn:hover {
+      background: #F5F5F5;
+    }
+
+    .close-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .type-selector {
+      display: flex;
+      gap: 8px;
+      padding: 20px;
+      background: #FAFAFA;
+    }
+
+    .type-btn {
+      flex: 1;
+      height: 48px;
+      border: 2px solid;
+      border-radius: 8px;
+      background: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .type-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .type-btn.expense {
+      border-color: #F44336;
+      color: #F44336;
+    }
+
+    .type-btn.expense.active {
+      background: #F44336;
+      color: white;
+    }
+
+    .type-btn.income {
+      border-color: #4CAF50;
+      color: #4CAF50;
+    }
+
+    .type-btn.income.active {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .type-btn.transfer {
+      border-color: #2196F3;
+      color: #2196F3;
+    }
+
+    .type-btn.transfer.active {
+      background: #2196F3;
+      color: white;
+    }
+
+    .form-content {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group.hidden {
+      display: none;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #666666;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .amount-input-wrapper {
+      display: flex;
+      align-items: center;
+      background: #F5F5F5;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 0 16px;
+      height: 64px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .amount-input-wrapper:focus-within {
+      border-color: #1976D2;
+      background: white;
+    }
+
+    .amount-input-wrapper.error {
+      border-color: #F44336;
+      background: #FFF5F5;
+    }
+
+    .currency-prefix {
+      font-size: 32px;
+      font-weight: 500;
+      color: #666666;
+      margin-right: 4px;
+    }
+
+    .amount-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 32px;
+      font-weight: 500;
+      color: #111111;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      outline: none;
+    }
+
+    .amount-input::placeholder {
+      color: #BDBDBD;
+    }
+
+    .error-text {
+      font-size: 12px;
+      color: #F44336;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .form-group.has-error .error-text {
+      display: block;
+    }
+
+    .form-group.has-error .select-wrapper,
+    .form-group.has-error .select-input {
+      border-color: #F44336;
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-input {
+      width: 100%;
+      height: 48px;
+      padding: 0 44px 0 12px;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      background: white;
+      font-size: 16px;
+      font-family: 'Roboto', sans-serif;
+      color: #111111;
+      cursor: pointer;
+      appearance: none;
+      transition: border-color 0.2s;
+    }
+
+    .select-input:focus {
+      outline: none;
+      border-color: #1976D2;
+    }
+
+    .select-input.error {
+      border-color: #F44336;
+    }
+
+    .select-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #666666;
+    }
+
+    .date-time-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .date-input {
+      flex: 1;
+      height: 48px;
+      padding: 0 12px;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      background: white;
+      font-size: 16px;
+      font-family: 'Roboto', sans-serif;
+      color: #111111;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .date-input:focus {
+      outline: none;
+      border-color: #1976D2;
+    }
+
+    .time-input {
+      width: 100px;
+      height: 48px;
+      padding: 0 12px;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      background: white;
+      font-size: 16px;
+      font-family: 'Roboto', sans-serif;
+      color: #111111;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .time-input:focus {
+      outline: none;
+      border-color: #1976D2;
+    }
+
+    .notes-input {
+      width: 100%;
+      min-height: 72px;
+      padding: 12px;
+      border: 1px solid #E0E0E0;
+      border-radius: 8px;
+      background: white;
+      font-size: 16px;
+      font-family: 'Roboto', sans-serif;
+      color: #111111;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .notes-input:focus {
+      outline: none;
+      border-color: #1976D2;
+    }
+
+    .notes-input::placeholder {
+      color: #9E9E9E;
+    }
+
+    .transfer-indicator {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      color: #2196F3;
+      font-size: 20px;
+      gap: 12px;
+    }
+
+    .transfer-indicator svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .transfer-indicator.visible {
+      display: flex;
+    }
+
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #E0E0E0;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 480px) {
+      .modal-footer {
+        position: sticky;
+        bottom: 0;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .footer-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+    }
+
+    .delete-btn {
+      height: 48px;
+      padding: 0 20px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 500;
+      color: #F44336;
+      cursor: pointer;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .delete-btn:hover {
+      background: #FFEBEE;
+    }
+
+    .delete-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .cancel-btn {
+      height: 48px;
+      padding: 0 24px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666666;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .cancel-btn:hover {
+      background: #F5F5F5;
+    }
+
+    .save-btn {
+      height: 48px;
+      padding: 0 32px;
+      border: none;
+      background: #1976D2;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .save-btn:hover {
+      background: #1565C0;
+    }
+
+    /* Delete Confirmation Modal */
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .confirm-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .confirm-modal {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.2s;
+    }
+
+    .confirm-overlay.active .confirm-modal {
+      transform: scale(1);
+    }
+
+    .confirm-header {
+      padding: 24px 24px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .confirm-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #FFF3E0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .confirm-icon svg {
+      width: 24px;
+      height: 24px;
+      color: #FF9800;
+    }
+
+    .confirm-content {
+      flex: 1;
+    }
+
+    .confirm-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111111;
+      margin-bottom: 8px;
+    }
+
+    .confirm-message {
+      font-size: 14px;
+      color: #666666;
+      line-height: 1.5;
+    }
+
+    .confirm-details {
+      margin: 16px 24px;
+      padding: 16px;
+      background: #FFF8E1;
+      border-radius: 8px;
+      border-left: 4px solid #FF9800;
+    }
+
+    .confirm-details p {
+      font-size: 13px;
+      color: #E65100;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .confirm-details p:last-child {
+      margin-bottom: 0;
+    }
+
+    .confirm-details svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .confirm-footer {
+      padding: 16px 24px 24px;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .confirm-cancel {
+      height: 44px;
+      padding: 0 20px;
+      border: 1px solid #E0E0E0;
+      background: white;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666666;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .confirm-cancel:hover {
+      background: #F5F5F5;
+      border-color: #BDBDBD;
+    }
+
+    .confirm-delete {
+      height: 44px;
+      padding: 0 20px;
+      border: none;
+      background: #F44336;
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .confirm-delete:hover {
+      background: #D32F2F;
+    }
+
+    .confirm-delete svg {
+      width: 18px;
+      height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Edit Transaction Modal -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h1 class="modal-title">Edit Transaction</h1>
+        <button class="close-btn" onclick="closeEditModal()" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="type-selector">
+        <button class="type-btn expense active" data-type="expense" onclick="setTransactionType('expense')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 7l-5-5-5 5"/>
+          </svg>
+          Expense
+        </button>
+        <button class="type-btn income" data-type="income" onclick="setTransactionType('income')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22V2M7 17l5 5 5-5"/>
+          </svg>
+          Income
+        </button>
+        <button class="type-btn transfer" data-type="transfer" onclick="setTransactionType('transfer')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 1l4 4-4 4M7 23l-4-4 4-4M3 12h18M21 23l-4-4-4 4"/>
+          </svg>
+          Transfer
+        </button>
+      </div>
+
+      <div class="form-content">
+        <!-- Amount -->
+        <div class="form-group" id="amountGroup">
+          <label class="form-label">Amount</label>
+          <div class="amount-input-wrapper" id="amountWrapper">
+            <span class="currency-prefix">$</span>
+            <input type="text" class="amount-input" id="amountInput" placeholder="0.00" inputmode="decimal" value="42.50">
+          </div>
+          <span class="error-text">Amount must be greater than 0</span>
+        </div>
+
+        <!-- From Account -->
+        <div class="form-group" id="accountGroup">
+          <label class="form-label" id="accountLabel">From Account</label>
+          <div class="select-wrapper">
+            <select class="select-input" id="accountSelect">
+              <option value="">Select account</option>
+              <option value="chase-checking" selected>💵 Chase Checking — $2,847.50</option>
+              <option value="ally-savings">🏦 Ally Savings — $12,450.00</option>
+              <option value="amex-gold">💳 Amex Gold — -$342.18</option>
+              <option value="capital-one">🏛️ Capital One 360 — $5,200.00</option>
+              <option value="fidelity">📈 Fidelity Brokerage — $18,920.45</option>
+              <option value="venmo">📱 Venmo — $125.00</option>
+            </select>
+            <svg class="select-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+          <span class="error-text">Please select an account</span>
+        </div>
+
+        <!-- Transfer Indicator & To Account -->
+        <div class="transfer-indicator" id="transferIndicator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12l7-7 7 7"/>
+          </svg>
+          <span>to</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19V5M5 12l7 7 7-7"/>
+          </svg>
+        </div>
+
+        <div class="form-group hidden" id="toAccountGroup">
+          <label class="form-label">To Account</label>
+          <div class="select-wrapper">
+            <select class="select-input" id="toAccountSelect">
+              <option value="">Select account</option>
+              <option value="chase-checking">💵 Chase Checking — $2,847.50</option>
+              <option value="ally-savings">🏦 Ally Savings — $12,450.00</option>
+              <option value="amex-gold">💳 Amex Gold — -$342.18</option>
+              <option value="capital-one" selected>🏛️ Capital One 360 — $5,200.00</option>
+              <option value="fidelity">📈 Fidelity Brokerage — $18,920.45</option>
+              <option value="venmo">📱 Venmo — $125.00</option>
+            </select>
+            <svg class="select-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="form-group" id="categoryGroup">
+          <label class="form-label">Category</label>
+          <div class="select-wrapper">
+            <select class="select-input" id="categorySelect">
+              <option value="">Select category</option>
+              <!-- Expense categories -->
+              <optgroup label="Food & Dining" data-type="expense">
+                <option value="food-groceries" selected>🍔 Food — Groceries</option>
+                <option value="food-restaurants">🍽️ Food — Restaurants</option>
+                <option value="food-coffee">☕ Food — Coffee</option>
+                <option value="food-delivery">📦 Food — Delivery</option>
+              </optgroup>
+              <optgroup label="Transportation" data-type="expense">
+                <option value="trans-gas">⛽ Transportation — Gas</option>
+                <option value="trans-parking">🅿️ Transportation — Parking</option>
+                <option value="trans-rideshare">🚗 Transportation — Rideshare</option>
+                <option value="trans-transit">🚇 Transportation — Transit</option>
+              </optgroup>
+              <optgroup label="Shopping" data-type="expense">
+                <option value="shop-clothing">👕 Shopping — Clothing</option>
+                <option value="shop-electronics">📱 Shopping — Electronics</option>
+                <option value="shop-home">🏠 Shopping — Home Goods</option>
+              </optgroup>
+              <optgroup label="Bills & Utilities" data-type="expense">
+                <option value="bills-rent">🏠 Bills — Rent</option>
+                <option value="bills-utilities">💡 Bills — Utilities</option>
+                <option value="bills-internet">📶 Bills — Internet</option>
+                <option value="bills-phone">📞 Bills — Phone</option>
+              </optgroup>
+              <optgroup label="Entertainment" data-type="expense">
+                <option value="ent-streaming">📺 Entertainment — Streaming</option>
+                <option value="ent-games">🎮 Entertainment — Games</option>
+                <option value="ent-events">🎭 Entertainment — Events</option>
+              </optgroup>
+              <!-- Income categories -->
+              <optgroup label="Income" data-type="income">
+                <option value="inc-salary">💼 Income — Salary</option>
+                <option value="inc-freelance">💻 Income — Freelance</option>
+                <option value="inc-investments">📈 Income — Investments</option>
+                <option value="inc-refunds">🔄 Income — Refunds</option>
+              </optgroup>
+            </select>
+            <svg class="select-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Date & Time -->
+        <div class="form-group">
+          <label class="form-label">Date & Time</label>
+          <div class="date-time-row">
+            <input type="date" class="date-input" id="dateInput" value="2026-05-19">
+            <input type="time" class="time-input" id="timeInput" value="14:30">
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+          <label class="form-label">Notes <span style="color: #9E9E9E; font-weight: 400;">(optional)</span></label>
+          <textarea class="notes-input" id="notesInput" placeholder="Add notes...">Weekly grocery run at Trader Joe's</textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="footer-left">
+          <button class="delete-btn" onclick="showDeleteConfirm()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+            </svg>
+            Delete
+          </button>
+        </div>
+        <div class="footer-center">
+          <button class="cancel-btn" onclick="closeEditModal()">Cancel</button>
+        </div>
+        <div class="footer-right">
+          <button class="save-btn" onclick="saveTransaction()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-modal">
+      <div class="confirm-header">
+        <div class="confirm-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="confirm-content">
+          <h2 class="confirm-title">Delete this transaction?</h2>
+          <p class="confirm-message">This action cannot be undone. The transaction will be permanently removed from your records.</p>
+        </div>
+      </div>
+
+      <div class="confirm-details">
+        <p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>Chase Checking balance will revert by <strong>$42.50</strong></span>
+        </p>
+        <p>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+          <span>Category "Food — Groceries" will lose this expense record</span>
+        </p>
+      </div>
+
+      <div class="confirm-footer">
+        <button class="confirm-cancel" onclick="hideDeleteConfirm()">Keep Transaction</button>
+        <button class="confirm-delete" onclick="confirmDelete()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentType = 'expense';
+    let hasChanges = false;
+
+    // Transaction type selector
+    function setTransactionType(type) {
+      const buttons = document.querySelectorAll('.type-btn');
+      buttons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+      });
+
+      currentType = type;
+      hasChanges = true;
+
+      const accountLabel = document.getElementById('accountLabel');
+      const categoryGroup = document.getElementById('categoryGroup');
+      const toAccountGroup = document.getElementById('toAccountGroup');
+      const transferIndicator = document.getElementById('transferIndicator');
+      const categorySelect = document.getElementById('categorySelect');
+
+      if (type === 'transfer') {
+        accountLabel.textContent = 'From Account';
+        categoryGroup.classList.add('hidden');
+        toAccountGroup.classList.remove('hidden');
+        transferIndicator.classList.add('visible');
+      } else {
+        accountLabel.textContent = 'Account';
+        categoryGroup.classList.remove('hidden');
+        toAccountGroup.classList.add('hidden');
+        transferIndicator.classList.remove('visible');
+      }
+
+      // Filter categories
+      filterCategories(type);
+    }
+
+    function filterCategories(type) {
+      const categorySelect = document.getElementById('categorySelect');
+      const optgroups = categorySelect.querySelectorAll('optgroup');
+
+      optgroups.forEach(group => {
+        const groupType = group.dataset.type;
+        if (groupType === type || groupType === undefined) {
+          group.style.display = '';
+        } else {
+          group.style.display = 'none';
+        }
+      });
+
+      // Reset selection
+      categorySelect.value = '';
+    }
+
+    // Validation
+    function validateForm() {
+      let isValid = true;
+
+      // Amount validation
+      const amountInput = document.getElementById('amountInput');
+      const amountWrapper = document.getElementById('amountWrapper');
+      const amountGroup = document.getElementById('amountGroup');
+      const amount = parseFloat(amountInput.value);
+
+      if (!amountInput.value || isNaN(amount) || amount <= 0) {
+        amountWrapper.classList.add('error');
+        amountGroup.classList.add('has-error');
+        isValid = false;
+      } else {
+        amountWrapper.classList.remove('error');
+        amountGroup.classList.remove('has-error');
+      }
+
+      // Account validation
+      const accountSelect = document.getElementById('accountSelect');
+      const accountGroup = document.getElementById('accountGroup');
+
+      if (!accountSelect.value) {
+        accountSelect.classList.add('error');
+        accountGroup.classList.add('has-error');
+        isValid = false;
+      } else {
+        accountSelect.classList.remove('error');
+        accountGroup.classList.remove('has-error');
+      }
+
+      // Transfer-specific validation
+      if (currentType === 'transfer') {
+        const toAccountSelect = document.getElementById('toAccountSelect');
+        const toAccountGroup = document.getElementById('toAccountGroup');
+
+        if (!toAccountSelect.value) {
+          toAccountSelect.classList.add('error');
+          toAccountGroup.classList.add('has-error');
+          isValid = false;
+        } else {
+          toAccountSelect.classList.remove('error');
+          toAccountGroup.classList.remove('has-error');
+        }
+
+        // Check same account
+        if (accountSelect.value === toAccountSelect.value) {
+          toAccountSelect.classList.add('error');
+          toAccountGroup.classList.add('has-error');
+          isValid = false;
+        }
+      }
+
+      return isValid;
+    }
+
+    // Format amount on blur
+    const amountInput = document.getElementById('amountInput');
+    amountInput.addEventListener('blur', () => {
+      const value = parseFloat(amountInput.value);
+      if (!isNaN(value) && value > 0) {
+        amountInput.value = value.toFixed(2);
+      }
+    });
+
+    amountInput.addEventListener('input', () => {
+      hasChanges = true;
+      const amountWrapper = document.getElementById('amountWrapper');
+      const amountGroup = document.getElementById('amountGroup');
+      amountWrapper.classList.remove('error');
+      amountGroup.classList.remove('has-error');
+    });
+
+    // Track changes on other inputs
+    document.querySelectorAll('select, textarea').forEach(el => {
+      el.addEventListener('change', () => { hasChanges = true; });
+    });
+
+    document.querySelectorAll('.date-input, .time-input').forEach(el => {
+      el.addEventListener('change', () => { hasChanges = true; });
+    });
+
+    // Save transaction
+    function saveTransaction() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const amount = document.getElementById('amountInput').value;
+      const account = document.getElementById('accountSelect');
+      const accountText = account.options[account.selectedIndex].text;
+      const category = document.getElementById('categorySelect');
+      const categoryText = category.options[category.selectedIndex]?.text || 'Transfer';
+      const date = document.getElementById('dateInput').value;
+      const time = document.getElementById('timeInput').value;
+      const notes = document.getElementById('notesInput').value;
+
+      alert(`Transaction saved!\n\n${currentType.charAt(0).toUpperCase() + currentType.slice(1)}: $${amount}\nAccount: ${accountText}\nCategory: ${categoryText}\nDate: ${date} at ${time}\nNotes: ${notes || '(none)'}`);
+    }
+
+    // Close edit modal
+    function closeEditModal() {
+      if (hasChanges) {
+        const discard = confirm('You have unsaved changes. Discard them?');
+        if (!discard) return;
+      }
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    // Delete confirmation
+    function showDeleteConfirm() {
+      // Update the balance revert amount dynamically
+      const amount = document.getElementById('amountInput').value;
+      const account = document.getElementById('accountSelect');
+      const accountText = account.options[account.selectedIndex].text.split('—')[0].trim();
+
+      const balanceRevertEl = document.querySelector('.confirm-details p:first-child span');
+      balanceRevertEl.innerHTML = `${accountText} balance will revert by <strong>$${amount}</strong>`;
+
+      document.getElementById('confirmOverlay').classList.add('active');
+    }
+
+    function hideDeleteConfirm() {
+      document.getElementById('confirmOverlay').classList.remove('active');
+    }
+
+    function confirmDelete() {
+      alert('Transaction deleted successfully!');
+      hideDeleteConfirm();
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    // Close on overlay click
+    document.getElementById('confirmOverlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('confirmOverlay')) {
+        hideDeleteConfirm();
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('confirmOverlay').classList.contains('active')) {
+          hideDeleteConfirm();
+        } else {
+          closeEditModal();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

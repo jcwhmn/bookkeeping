@@ -9,9 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -47,66 +47,84 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public List<TransactionDto> getTransactionsByMonth(int year, int month) {
         Long userId = securityUtils.requireCurrentUser().getId();
-        
-        // Calculate start and end timestamps for the month
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1);
-        
         long startTime = startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
         long endTime = endDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
-        
         return transactionRepository.findByUserIdAndMonth(userId, startTime, endTime)
                 .stream().map(transactionMapper::toDto).toList();
     }
 
+    /**
+     * Cursor-based paginated list — use for all "load more" patterns.
+     * @param cursor  transactionTime of the last item from previous page (exclusive upper bound)
+     * @param limit   max items to return
+     */
+    @Transactional(readOnly = true)
+    public TransactionPageResponse listByCursor(Long cursor, int limit) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        List<Transaction> txs = transactionRepository.findByUserIdBeforeCursor(
+                userId, cursor, PageRequest.of(0, limit + 1));
+        Long nextCursor = null;
+        if (txs.size() > limit) {
+            nextCursor = txs.get(limit - 1).getTransactionTime();
+            txs = txs.subList(0, limit);
+        }
+        return new TransactionPageResponse(
+                txs.stream().map(transactionMapper::toDto).toList(),
+                nextCursor);
+    }
+
+    /**
+     * List all transactions for the user (unpaginated). Use for export.
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDto> listAll() {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        return transactionRepository.findByUserIdOrderByTransactionTimeDesc(userId)
+                .stream().map(transactionMapper::toDto).toList();
+    }
+
+    /**
+     * Count transactions matching the given filters.
+     */
+    @Transactional(readOnly = true)
+    public long countTransactions(TransactionSearchParams params) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        if (params.hasFilters()) {
+            return transactionRepository.countWithFilters(
+                    userId,
+                    params.year(),
+                    params.month(),
+                    params.accountId() != null ? params.accountId().longValue() : null,
+                    params.categoryId() != null ? params.categoryId().longValue() : null,
+                    params.transactionType(),
+                    params.search());
+        }
+        return transactionRepository.countByUserId(userId);
+    }
+
+    /**
+     * Search/filter transactions with DB-level filtering (replaces in-memory approach).
+     * All filters are applied at the database level via JPQL.
+     */
     @Transactional(readOnly = true)
     public List<TransactionDto> searchTransactions(TransactionSearchParams params, int limit) {
         Long userId = securityUtils.requireCurrentUser().getId();
-        List<Transaction> results;
-        
         if (params.hasFilters()) {
-            // Get all user transactions (up to limit * 10 for filtering)
-            results = transactionRepository.findByUserIdOrderByTransactionTimeDesc(userId, PageRequest.of(0, limit * 10));
-            
-            // Apply filters
-            results = results.stream().filter(tx -> {
-                // Year filter
-                if (params.year() != null && params.month() != null) {
-                    LocalDate txDate = LocalDate.ofEpochDay(tx.getTransactionTime() / 86400);
-                    if (txDate.getYear() != params.year() || txDate.getMonthValue() != params.month()) {
-                        return false;
-                    }
-                }
-                // Account filter
-                if (params.accountId() != null && !tx.getAccountId().equals(params.accountId().longValue())) {
-                    return false;
-                }
-                // Category filter
-                if (params.categoryId() != null && (tx.getCategoryId() == null || !tx.getCategoryId().equals(params.categoryId().longValue()))) {
-                    return false;
-                }
-                // Type filter
-                if (params.transactionType() != null && tx.getTransactionType() != params.transactionType()) {
-                    return false;
-                }
-                // Search filter
-                if (params.search() != null && !params.search().isBlank()) {
-                    String searchLower = params.search().toLowerCase();
-                    boolean matches = tx.getDescription() != null && tx.getDescription().toLowerCase().contains(searchLower);
-                    if (!matches) return false;
-                }
-                return true;
-            }).toList();
-            
-            // Limit results
-            if (results.size() > limit) {
-                results = results.subList(0, limit);
-            }
-        } else {
-            results = transactionRepository.findByUserIdOrderByTransactionTimeDesc(userId, PageRequest.of(0, limit));
+            return transactionRepository.findWithFilters(
+                    userId,
+                    params.year(),
+                    params.month(),
+                    params.accountId() != null ? params.accountId().longValue() : null,
+                    params.categoryId() != null ? params.categoryId().longValue() : null,
+                    params.transactionType(),
+                    params.search(),
+                    PageRequest.of(0, limit)
+            ).stream().map(transactionMapper::toDto).toList();
         }
-        
-        return results.stream().map(transactionMapper::toDto).toList();
+        return transactionRepository.findByUserIdOrderByTransactionTimeDesc(userId, PageRequest.of(0, limit))
+                .stream().map(transactionMapper::toDto).toList();
     }
 
     @Transactional
@@ -128,21 +146,17 @@ public class TransactionService {
 
         // Handle transfer (type 4 = TRANSFER_OUT)
         if (request.transactionType() == 4 && request.destinationAccountId() != null) {
-            // Validate accounts are different
             if (request.accountId().equals(request.destinationAccountId())) {
-                throw new BusinessException(ResultCode.TRANSACTION_INVALID, 
+                throw new BusinessException(ResultCode.TRANSACTION_INVALID,
                         "Source and destination accounts must be different");
             }
 
-            // Create TRANSFER_OUT record
-            tx = tx.toBuilder().transactionType(4).build();
             accountService.updateBalance(request.accountId(), -Math.abs(request.amount()));
             accountService.updateBalance(request.destinationAccountId(), request.amount());
             Transaction saved = transactionRepository.save(tx);
 
-            // Create TRANSFER_IN record
             Transaction transferIn = Transaction.builder()
-                    .transactionType(5) // TRANSFER_IN
+                    .transactionType(5)
                     .accountId(request.destinationAccountId())
                     .categoryId(null)
                     .amount(request.amount())
@@ -153,26 +167,14 @@ public class TransactionService {
                     .build();
             transferIn = transactionRepository.save(transferIn);
 
-            // Link back
             saved = transactionRepository.save(saved.toBuilder().relatedId(transferIn.getId()).build());
-
             return transactionMapper.toDto(saved);
         }
 
-        // Handle other transaction types
         switch (request.transactionType()) {
-            case 1, 2 -> {
-                // MODIFY_BALANCE or INCOME -> add
-                accountService.updateBalance(request.accountId(), request.amount());
-            }
-            case 3 -> {
-                // EXPENSE -> subtract
-                accountService.updateBalance(request.accountId(), -Math.abs(request.amount()));
-            }
-            case 4 -> {
-                // TRANSFER_OUT (without destination means just balance adjustment)
-                accountService.updateBalance(request.accountId(), -Math.abs(request.amount()));
-            }
+            case 1, 2 -> accountService.updateBalance(request.accountId(), request.amount());
+            case 3 -> accountService.updateBalance(request.accountId(), -Math.abs(request.amount()));
+            case 4 -> accountService.updateBalance(request.accountId(), -Math.abs(request.amount()));
             default -> throw new BusinessException(ResultCode.VALIDATION_ERROR, "Invalid transaction type");
         }
 
@@ -185,9 +187,7 @@ public class TransactionService {
         Transaction existing = transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new BusinessException(ResultCode.TRANSACTION_NOT_FOUND, "Transaction not found"));
 
-        // Handle linked transfers (TRANSFER_OUT/TRANSFER_IN pairs)
         if (existing.getRelatedId() != null) {
-            // For transfers, only allow editing notes/description
             existing = existing.toBuilder()
                     .description(request.description())
                     .tagIds(request.tagIds())
@@ -195,27 +195,19 @@ public class TransactionService {
             return transactionMapper.toDto(transactionRepository.save(existing));
         }
 
-        // Calculate balance change from old transaction
         Long oldAmount = existing.getAmount();
         Long oldAccountId = existing.getAccountId();
         Long oldChange = calculateBalanceChange(existing.getTransactionType(), oldAmount);
-
-        // Calculate new balance change
         Long newChange = calculateBalanceChange(request.transactionType(), request.amount());
 
-        // Revert old balance change
         accountService.updateBalance(oldAccountId, -oldChange);
 
-        // Apply new balance change (if account changed, apply to new account too)
         if (request.accountId().equals(oldAccountId)) {
-            // Same account: apply net change
             accountService.updateBalance(request.accountId(), newChange);
         } else {
-            // Different account: apply full change to new account
             accountService.updateBalance(request.accountId(), newChange);
         }
 
-        // Update transaction
         Transaction.TransactionBuilder builder = existing.toBuilder()
                 .transactionType(request.transactionType())
                 .accountId(request.accountId())
@@ -236,55 +228,44 @@ public class TransactionService {
         Transaction existing = transactionRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new BusinessException(ResultCode.TRANSACTION_NOT_FOUND, "Transaction not found"));
 
-        // Handle linked transfers
         if (existing.getRelatedId() != null) {
-            // Delete the related transaction
             transactionRepository.findById(existing.getRelatedId())
                     .ifPresent(related -> {
-                        // Revert balance for related transaction
                         Long relatedChange = calculateBalanceChange(related.getTransactionType(), related.getAmount());
                         accountService.updateBalance(related.getAccountId(), -relatedChange);
                         transactionRepository.delete(related);
                     });
         }
 
-        // Revert balance change
         Long change = calculateBalanceChange(existing.getTransactionType(), existing.getAmount());
         accountService.updateBalance(existing.getAccountId(), -change);
-
-        // Delete transaction
         transactionRepository.delete(existing);
     }
 
     @Transactional(readOnly = true)
     public StatisticsDto getStatistics(int year, int month) {
         Long userId = securityUtils.requireCurrentUser().getId();
-        
-        // Calculate start and end timestamps
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.plusMonths(1);
         long startTime = startDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
         long endTime = endDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
-        
-        // Get transactions for the month
+
         List<Transaction> transactions = transactionRepository.findByUserIdAndMonth(userId, startTime, endTime);
-        
-        // Calculate totals
+
         long totalIncome = 0, totalExpense = 0;
         List<Transaction> incomeTxs = new java.util.ArrayList<>();
         List<Transaction> expenseTxs = new java.util.ArrayList<>();
-        
+
         for (Transaction tx : transactions) {
             switch (tx.getTransactionType()) {
                 case 2 -> { totalIncome += tx.getAmount(); incomeTxs.add(tx); }
                 case 3 -> { totalExpense += tx.getAmount(); expenseTxs.add(tx); }
             }
         }
-        
-        // Build category breakdowns
+
         StatisticsDto.CategoryBreakdown[] incomeBreakdown = buildCategoryBreakdown(incomeTxs, totalIncome);
         StatisticsDto.CategoryBreakdown[] expenseBreakdown = buildCategoryBreakdown(expenseTxs, totalExpense);
-        
+
         return new StatisticsDto(
             totalIncome,
             totalExpense,
@@ -294,13 +275,12 @@ public class TransactionService {
             expenseBreakdown
         );
     }
-    
+
     private StatisticsDto.CategoryBreakdown[] buildCategoryBreakdown(List<Transaction> transactions, long total) {
-        // Group by category
         Map<Long, List<Transaction>> byCategory = transactions.stream()
             .filter(tx -> tx.getCategoryId() != null)
             .collect(Collectors.groupingBy(Transaction::getCategoryId));
-        
+
         List<StatisticsDto.CategoryBreakdown> breakdowns = new java.util.ArrayList<>();
         for (Map.Entry<Long, List<Transaction>> entry : byCategory.entrySet()) {
             long amount = entry.getValue().stream().mapToLong(Transaction::getAmount).sum();
@@ -311,21 +291,15 @@ public class TransactionService {
                 entry.getKey(), name, amount, count, percentage
             ));
         }
-        // Sort by amount descending
         breakdowns.sort((a, b) -> Long.compare(b.amount(), a.amount()));
         return breakdowns.toArray(new StatisticsDto.CategoryBreakdown[0]);
     }
 
-    /**
-     * Calculate the balance change for an account based on transaction type.
-     * Returns positive for additions, negative for subtractions.
-     */
     private Long calculateBalanceChange(Integer transactionType, Long amount) {
         return switch (transactionType) {
-            case 1, 2, 5 -> amount; // MODIFY_BALANCE, INCOME, TRANSFER_IN: add
-            case 3, 4 -> -Math.abs(amount); // EXPENSE, TRANSFER_OUT: subtract
+            case 1, 2, 5 -> amount;
+            case 3, 4 -> -Math.abs(amount);
             default -> 0L;
         };
     }
-
 }

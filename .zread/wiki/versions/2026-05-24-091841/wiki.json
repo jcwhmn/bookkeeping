@@ -1,0 +1,143 @@
+{
+  "id": "2026-05-24-091841",
+  "generated_at": "2026-05-24T01:18:41.4386767Z",
+  "language": "zh",
+  "pages": [
+    {
+      "slug": "1-gai-shu-xiang-mu-ding-wei-yu-he-xin-jie-zhi",
+      "title": "概述 - 项目定位与核心价值",
+      "file": "1-gai-shu-xiang-mu-ding-wei-yu-he-xin-jie-zhi.md",
+      "section": "入门指南",
+      "level": "Beginner"
+    },
+    {
+      "slug": "2-kuai-su-kai-shi-huan-jing-da-jian-yu-yun-xing-zhi-nan",
+      "title": "快速开始 - 环境搭建与运行指南",
+      "file": "2-kuai-su-kai-shi-huan-jing-da-jian-yu-yun-xing-zhi-nan.md",
+      "section": "入门指南",
+      "level": "Beginner"
+    },
+    {
+      "slug": "3-xi-tong-jia-gou-spring-boot-nuxt-4-quan-zhan-she-ji",
+      "title": "系统架构 - Spring Boot + Nuxt 4 全栈设计",
+      "file": "3-xi-tong-jia-gou-spring-boot-nuxt-4-quan-zhan-she-ji.md",
+      "section": "入门指南",
+      "group": "技术架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "4-hou-duan-jie-gou-java-bao-zu-zhi-yu-mo-kuai-hua-fen",
+      "title": "后端结构 - Java 包组织与模块划分",
+      "file": "4-hou-duan-jie-gou-java-bao-zu-zhi-yu-mo-kuai-hua-fen.md",
+      "section": "入门指南",
+      "group": "技术架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "5-qian-duan-jie-gou-nuxt-ye-mian-yu-zu-jian-ti-xi",
+      "title": "前端结构 - Nuxt 页面与组件体系",
+      "file": "5-qian-duan-jie-gou-nuxt-ye-mian-yu-zu-jian-ti-xi.md",
+      "section": "入门指南",
+      "group": "技术架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "6-ren-zheng-ji-zhi-jwt-ling-pai-yu-an-quan-pei-zhi",
+      "title": "认证机制 - JWT 令牌与安全配置",
+      "file": "6-ren-zheng-ji-zhi-jwt-ling-pai-yu-an-quan-pei-zhi.md",
+      "section": "深度解析",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "7-shu-ju-ku-she-ji-flyway-qian-yi-yu-shi-ti-guan-xi",
+      "title": "数据库设计 - Flyway 迁移与实体关系",
+      "file": "7-shu-ju-ku-she-ji-flyway-qian-yi-yu-shi-ti-guan-xi.md",
+      "section": "深度解析",
+      "level": "Advanced"
+    },
+    {
+      "slug": "8-api-she-ji-gui-fan-tong-xiang-ying-ge-shi-yu-cuo-wu-ma",
+      "title": "API 设计规范 - 统一响应格式与错误码",
+      "file": "8-api-she-ji-gui-fan-tong-xiang-ying-ge-shi-yu-cuo-wu-ma.md",
+      "section": "深度解析",
+      "level": "Advanced"
+    },
+    {
+      "slug": "9-zhang-hu-guan-li-zhang-hu-shi-ti-yu-crud-cao-zuo",
+      "title": "账户管理 - 账户实体与 CRUD 操作",
+      "file": "9-zhang-hu-guan-li-zhang-hu-shi-ti-yu-crud-cao-zuo.md",
+      "section": "深度解析",
+      "group": "核心模块",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "10-jiao-yi-guan-li-jiao-yi-lei-xing-yu-jin-e-chu-li",
+      "title": "交易管理 - 交易类型与金额处理",
+      "file": "10-jiao-yi-guan-li-jiao-yi-lei-xing-yu-jin-e-chu-li.md",
+      "section": "深度解析",
+      "group": "核心模块",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "11-fen-lei-guan-li-shou-ru-zhi-chu-fen-lei-ti-xi",
+      "title": "分类管理 - 收入支出分类体系",
+      "file": "11-fen-lei-guan-li-shou-ru-zhi-chu-fen-lei-ti-xi.md",
+      "section": "深度解析",
+      "group": "核心模块",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "12-biao-qian-xi-tong-jiao-yi-biao-qian-yu-shai-xuan-gong-neng",
+      "title": "标签系统 - 交易标签与筛选功能",
+      "file": "12-biao-qian-xi-tong-jiao-yi-biao-qian-yu-shai-xuan-gong-neng.md",
+      "section": "深度解析",
+      "group": "核心模块",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "13-yu-suan-guan-li-yue-du-yu-suan-she-zhi-yu-zhui-zong",
+      "title": "预算管理 - 月度预算设置与追踪",
+      "file": "13-yu-suan-guan-li-yue-du-yu-suan-she-zhi-yu-zhui-zong.md",
+      "section": "深度解析",
+      "group": "核心模块",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "14-kai-fa-liu-cheng-discovery-design-implementation-verification",
+      "title": "开发流程 - Discovery → Design → Implementation → Verification",
+      "file": "14-kai-fa-liu-cheng-discovery-design-implementation-verification.md",
+      "section": "开发指南",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "15-ce-shi-ce-lue-dan-yuan-ce-shi-yu-ji-cheng-ce-shi",
+      "title": "测试策略 - 单元测试与集成测试",
+      "file": "15-ce-shi-ce-lue-dan-yuan-ce-shi-yu-ji-cheng-ce-shi.md",
+      "section": "开发指南",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "16-bian-ma-gui-fan-lombok-shi-yong-yu-dto-ying-she",
+      "title": "编码规范 - Lombok 使用与 DTO 映射",
+      "file": "16-bian-ma-gui-fan-lombok-shi-yong-yu-dto-ying-she.md",
+      "section": "开发指南",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "17-ying-yong-pei-zhi-application-yml-yu-duo-huan-jing-zhi-chi",
+      "title": "应用配置 - application.yml 与多环境支持",
+      "file": "17-ying-yong-pei-zhi-application-yml-yu-duo-huan-jing-zhi-chi.md",
+      "section": "开发指南",
+      "group": "配置说明",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "18-shu-ju-ku-lian-jie-postgresql-lian-jie-chi-pei-zhi",
+      "title": "数据库连接 - PostgreSQL 连接池配置",
+      "file": "18-shu-ju-ku-lian-jie-postgresql-lian-jie-chi-pei-zhi.md",
+      "section": "开发指南",
+      "group": "配置说明",
+      "level": "Advanced"
+    }
+  ]
+}

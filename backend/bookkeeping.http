@@ -1,0 +1,416 @@
+### Bookkeeping API — REST Client Test Collection
+### Use: IntelliJ IDEA HTTP Client (Ultimate) or VS Code REST Client extension
+###
+### Quick Start:
+###   1. Run the "Login" request first
+###   2. All subsequent requests use the token automatically
+###
+### Base URL: http://localhost:8080
+### Test Account: demo / demo123
+
+@baseUrl = http://localhost:8080
+@token = {{login.response.body.result.token}}
+
+
+# ============================================================
+# 0. Setup & Health
+# ============================================================
+
+### Health Check
+GET {{baseUrl}}/api/v1/health
+
+### Login (get token)
+### @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "demo",
+  "password": "demo123"
+}
+
+
+# ============================================================
+# 1. Authentication
+# ============================================================
+
+### Get Current User
+GET {{baseUrl}}/api/v1/auth/me
+Authorization: Bearer {{token}}
+
+### Update User Profile
+PUT {{baseUrl}}/api/v1/users/me
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "nickname": "Demo User",
+  "email": "demo@bookkeeping.com"
+}
+
+
+# ============================================================
+# 2. Accounts
+# ============================================================
+
+### List All Accounts
+GET {{baseUrl}}/api/v1/accounts
+Authorization: Bearer {{token}}
+
+### Get Account by ID
+GET {{baseUrl}}/api/v1/accounts/1
+Authorization: Bearer {{token}}
+
+### Create Account
+POST {{baseUrl}}/api/v1/accounts
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Savings Account",
+  "accountType": "SAVINGS",
+  "currency": "USD",
+  "initialBalance": 1000000,
+  "description": "Monthly savings"
+}
+
+### Update Account
+PUT {{baseUrl}}/api/v1/accounts/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Main Checking",
+  "description": "Updated description"
+}
+
+### Delete Account (soft delete)
+DELETE {{baseUrl}}/api/v1/accounts/5
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 3. Categories
+# ============================================================
+
+### List All Categories
+GET {{baseUrl}}/api/v1/categories
+Authorization: Bearer {{token}}
+
+### Create Category
+POST {{baseUrl}}/api/v1/categories
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Subscriptions",
+  "categoryType": "EXPENSE"
+}
+
+
+# ============================================================
+# 4. Transactions (CRUD + Search + Month Nav)
+# ============================================================
+
+### List Transactions (default 100)
+GET {{baseUrl}}/api/v1/transactions
+Authorization: Bearer {{token}}
+
+### List Transactions by Month (current month)
+GET {{baseUrl}}/api/v1/transactions?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### List Transactions with Filters
+GET {{baseUrl}}/api/v1/transactions?year=2026&month=5&transactionType=3&accountId=1
+Authorization: Bearer {{token}}
+
+### Search Transactions (text search)
+GET {{baseUrl}}/api/v1/transactions?search=salary
+Authorization: Bearer {{token}}
+
+### Get Statistics for a Month
+GET {{baseUrl}}/api/v1/transactions/statistics?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### Create Income Transaction
+POST {{baseUrl}}/api/v1/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 2,
+  "accountId": 1,
+  "categoryId": 1,
+  "amount": 500000,
+  "description": "Monthly bonus",
+  "transactionTime": {{$datetime iso8601}}
+}
+
+### Create Expense Transaction (with date)
+POST {{baseUrl}}/api/v1/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 3,
+  "accountId": 1,
+  "categoryId": 5,
+  "amount": 3500,
+  "description": "Lunch meeting",
+  "transactionTime": 1779369600
+}
+
+### Create Transfer Transaction
+POST {{baseUrl}}/api/v1/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 4,
+  "accountId": 1,
+  "destinationAccountId": 2,
+  "amount": 100000,
+  "description": "Transfer to savings",
+  "transactionTime": 1779369600
+}
+
+### Create Transaction with Tags
+POST {{baseUrl}}/api/v1/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 3,
+  "accountId": 1,
+  "categoryId": 7,
+  "amount": 8900,
+  "description": "Online shopping",
+  "transactionTime": 1779369600,
+  "tagIds": "1,2"
+}
+
+### Update Transaction
+PUT {{baseUrl}}/api/v1/transactions/15
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 3,
+  "accountId": 1,
+  "categoryId": 5,
+  "amount": 5000,
+  "description": "Updated lunch meeting",
+  "transactionTime": 1779369600
+}
+
+### Update Transaction Tags
+PUT {{baseUrl}}/api/v1/transactions/15
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 3,
+  "accountId": 1,
+  "categoryId": 5,
+  "amount": 5000,
+  "description": "Updated lunch meeting",
+  "transactionTime": 1779369600,
+  "tagIds": "1"
+}
+
+### Delete Transaction
+DELETE {{baseUrl}}/api/v1/transactions/15
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 5. Tags (CRUD)
+# ============================================================
+
+### List All Tags
+GET {{baseUrl}}/api/v1/tags
+Authorization: Bearer {{token}}
+
+### Create Tag
+POST {{baseUrl}}/api/v1/tags
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Business",
+  "color": "#2196F3"
+}
+
+### Create Another Tag
+POST {{baseUrl}}/api/v1/tags
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Personal",
+  "color": "#E91E63"
+}
+
+### Update Tag
+PUT {{baseUrl}}/api/v1/tags/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Work",
+  "color": "#FF5722"
+}
+
+### Delete Tag
+DELETE {{baseUrl}}/api/v1/tags/2
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 6. Statistics & Charts
+# ============================================================
+
+### Get Monthly Statistics
+GET {{baseUrl}}/api/v1/transactions/statistics?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### Get Previous Month Statistics
+GET {{baseUrl}}/api/v1/transactions/statistics?year=2026&month=4
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 7. Budgets (CRUD)
+# ============================================================
+
+### List Budgets for Month
+GET {{baseUrl}}/api/v1/budgets?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### Create Budget
+POST {{baseUrl}}/api/v1/budgets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "categoryId": 5,
+  "amount": 50000,
+  "year": 2026,
+  "month": 5
+}
+
+### Create Budget for Shopping
+POST {{baseUrl}}/api/v1/budgets
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "categoryId": 7,
+  "amount": 20000,
+  "year": 2026,
+  "month": 5
+}
+
+### Update Budget
+PUT {{baseUrl}}/api/v1/budgets/1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "amount": 60000
+}
+
+### Delete Budget
+DELETE {{baseUrl}}/api/v1/budgets/2
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 8. CSV Export
+# ============================================================
+
+### Export Transactions as CSV (current month)
+GET {{baseUrl}}/api/v1/transactions/export?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### Export All Transactions
+GET {{baseUrl}}/api/v1/transactions/export
+Authorization: Bearer {{token}}
+
+### Export Transactions by Account
+GET {{baseUrl}}/api/v1/transactions/export?accountId=1
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# 9. Swagger / OpenAPI
+# ============================================================
+
+### OpenAPI JSON
+GET {{baseUrl}}/api-docs
+
+### Swagger UI
+GET {{baseUrl}}/swagger-ui/index.html
+
+
+# ============================================================
+# 10. Complete Smoke Test
+# Run these in order for full integration test
+# ============================================================
+
+### [Smoke] 1. Health
+GET {{baseUrl}}/api/v1/health
+
+### [Smoke] 2. Login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "demo",
+  "password": "demo123"
+}
+
+### [Smoke] 3. Get User
+GET {{baseUrl}}/api/v1/auth/me
+Authorization: Bearer {{token}}
+
+### [Smoke] 4. List Accounts
+GET {{baseUrl}}/api/v1/accounts
+Authorization: Bearer {{token}}
+
+### [Smoke] 5. Create Transaction
+POST {{baseUrl}}/api/v1/transactions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "transactionType": 2,
+  "accountId": 1,
+  "categoryId": 1,
+  "amount": 100000,
+  "description": "Smoke test income",
+  "transactionTime": {{$datetime iso8601}}
+}
+
+### [Smoke] 6. Get Transactions
+GET {{baseUrl}}/api/v1/transactions?limit=5
+Authorization: Bearer {{token}}
+
+### [Smoke] 7. Get Statistics
+GET {{baseUrl}}/api/v1/transactions/statistics?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### [Smoke] 8. Get Tags
+GET {{baseUrl}}/api/v1/tags
+Authorization: Bearer {{token}}
+
+### [Smoke] 9. Get Budgets
+GET {{baseUrl}}/api/v1/budgets?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### [Smoke] 10. Export CSV
+GET {{baseUrl}}/api/v1/transactions/export?year=2026&month=5
+Authorization: Bearer {{token}}
+
+### [Smoke] 11. Final Health
+GET {{baseUrl}}/api/v1/health
