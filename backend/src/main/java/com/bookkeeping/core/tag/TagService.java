@@ -12,19 +12,27 @@ import java.util.List;
 public class TagService {
 
     private final TagRepository tagRepository;
+    private final TagGroupRepository tagGroupRepository;
     private final SecurityUtils securityUtils;
     private final TagMapper tagMapper;
+    private final TagGroupMapper tagGroupMapper;
 
-    public TagService(TagRepository tagRepository, SecurityUtils securityUtils, TagMapper tagMapper) {
+    public TagService(TagRepository tagRepository,
+                     TagGroupRepository tagGroupRepository,
+                     SecurityUtils securityUtils,
+                     TagMapper tagMapper,
+                     TagGroupMapper tagGroupMapper) {
         this.tagRepository = tagRepository;
+        this.tagGroupRepository = tagGroupRepository;
         this.securityUtils = securityUtils;
         this.tagMapper = tagMapper;
+        this.tagGroupMapper = tagGroupMapper;
     }
 
     @Transactional(readOnly = true)
     public List<TagDto> getAllTags() {
         Long userId = securityUtils.requireCurrentUser().getId();
-        return tagRepository.findByUserIdAndDeletedFalseOrderByNameAsc(userId)
+        return tagRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(userId)
                 .stream().map(tagMapper::toDto).toList();
     }
 
@@ -33,7 +41,6 @@ public class TagService {
         Long userId = securityUtils.requireCurrentUser().getId();
         Long now = System.currentTimeMillis() / 1000;
 
-        // Check for duplicate name
         if (tagRepository.existsByUserIdAndNameAndDeletedFalse(userId, request.name())) {
             throw new BusinessException(ResultCode.VALIDATION_ERROR, "Tag with this name already exists");
         }
@@ -42,6 +49,9 @@ public class TagService {
                 .userId(userId)
                 .name(request.name())
                 .color(request.color() != null ? request.color() : "#1976D2")
+                .groupId(request.groupId())
+                .sortOrder(0)
+                .hidden(false)
                 .createdTime(now)
                 .build();
 
@@ -56,7 +66,6 @@ public class TagService {
 
         Tag.TagBuilder builder = tag.toBuilder();
 
-        // Check for duplicate name (excluding current tag)
         if (request.name() != null && !request.name().equals(tag.getName())) {
             if (tagRepository.existsByUserIdAndNameAndDeletedFalse(userId, request.name())) {
                 throw new BusinessException(ResultCode.VALIDATION_ERROR, "Tag with this name already exists");
@@ -66,6 +75,9 @@ public class TagService {
 
         if (request.color() != null) {
             builder.color(request.color());
+        }
+        if (request.groupId() != null) {
+            builder.groupId(request.groupId());
         }
         builder.updatedTime(System.currentTimeMillis() / 1000);
 
@@ -84,4 +96,86 @@ public class TagService {
                 .build());
     }
 
+    @Transactional
+    public void hideTag(Long id, boolean hidden) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        Tag tag = tagRepository.findByIdAndUserIdAndDeletedFalse(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Tag not found"));
+        tagRepository.save(tag.toBuilder().hidden(hidden).build());
+    }
+
+    @Transactional
+    public void reorderTags(List<Long> orderedIds) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        for (int i = 0; i < orderedIds.size(); i++) {
+            tagRepository.updateSortOrder(orderedIds.get(i), userId, i);
+        }
+    }
+
+    // === Tag Groups ===
+
+    @Transactional(readOnly = true)
+    public List<TagGroupDto> getAllTagGroups() {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        return tagGroupRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(userId)
+                .stream().map(tagGroupMapper::toDto).toList();
+    }
+
+    @Transactional
+    public TagGroupDto createTagGroup(String name, String color) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        Long now = System.currentTimeMillis() / 1000;
+
+        TagGroup group = TagGroup.builder()
+                .userId(userId)
+                .name(name)
+                .color(color != null ? color : "#607D8B")
+                .sortOrder(0)
+                .createdTime(now)
+                .build();
+
+        return tagGroupMapper.toDto(tagGroupRepository.save(group));
+    }
+
+    @Transactional
+    public TagGroupDto updateTagGroup(Long id, String name, String color) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        TagGroup group = tagGroupRepository.findByIdAndUserIdAndDeletedFalse(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Tag group not found"));
+
+        TagGroup.TagGroupBuilder builder = group.toBuilder();
+        if (name != null) builder.name(name);
+        if (color != null) builder.color(color);
+        builder.updatedTime(System.currentTimeMillis() / 1000);
+
+        return tagGroupMapper.toDto(tagGroupRepository.save(builder.build()));
+    }
+
+    @Transactional
+    public void deleteTagGroup(Long id) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        TagGroup group = tagGroupRepository.findByIdAndUserIdAndDeletedFalse(id, userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Tag group not found"));
+
+        // Unassign all tags from this group
+        List<Tag> tags = tagRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(userId);
+        for (Tag tag : tags) {
+            if (id.equals(tag.getGroupId())) {
+                tagRepository.save(tag.toBuilder().groupId(null).build());
+            }
+        }
+
+        tagGroupRepository.save(group.toBuilder()
+                .deleted(true)
+                .updatedTime(System.currentTimeMillis() / 1000)
+                .build());
+    }
+
+    @Transactional
+    public void reorderTagGroups(List<Long> orderedIds) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        for (int i = 0; i < orderedIds.size(); i++) {
+            tagGroupRepository.updateSortOrder(orderedIds.get(i), userId, i);
+        }
+    }
 }

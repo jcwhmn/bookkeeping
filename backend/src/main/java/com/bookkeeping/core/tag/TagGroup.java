@@ -4,12 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "tags")
+@Table(name = "tag_groups")
 @Getter
 @Builder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class Tag {
+public class TagGroup {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,6 +24,9 @@ public class Tag {
     @Column(length = 7)
     private String color;
 
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder = 0;
+
     @Column(name = "created_unix_time", nullable = false)
     private Long createdTime;
 
@@ -32,13 +35,4 @@ public class Tag {
 
     @Column(name = "deleted")
     private Boolean deleted = false;
-
-    @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder = 0;
-
-    @Column(nullable = false)
-    private Boolean hidden = false;
-
-    @Column(name = "group_id")
-    private Long groupId;
 }
