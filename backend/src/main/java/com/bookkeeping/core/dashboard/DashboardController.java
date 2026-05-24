@@ -34,7 +34,7 @@ public class DashboardController {
     public ApiResponse<Map<String, Object>> stats() {
         Long userId = securityUtils.requireCurrentUser().getId();
 
-        var accounts = accountRepository.findByUserIdAndDeletedFalse(userId);
+        var accounts = accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(userId);
         long totalBalance = accounts.stream().mapToLong(a -> a.getBalance()).sum();
         long accountCount = accounts.size();
 

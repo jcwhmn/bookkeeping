@@ -23,7 +23,10 @@ public record CreateAccountRequest(
     Long initialBalance,
 
     @Size(max = 255, message = "Description must be at most 255 characters")
-    String description
+    String description,
+
+    /** Parent account ID for sub-account creation; null for top-level accounts. */
+    Long parentId
 ) {
     public CreateAccountRequest {
         if (initialBalance == null) initialBalance = 0L;

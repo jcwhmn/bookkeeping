@@ -46,4 +46,16 @@ public class Account extends BaseEntity {
 
     @Column
     private Boolean deleted = false;
+
+    /** Parent account ID for sub-accounts; NULL for top-level accounts. */
+    @Column(name = "parent_id")
+    private Long parentId;
+
+    /** Display order for drag-to-reorder. */
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder = 0;
+
+    /** If true, account is hidden from UI. */
+    @Column(nullable = false)
+    private Boolean hidden = false;
 }

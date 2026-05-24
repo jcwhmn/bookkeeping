@@ -16,5 +16,8 @@ public record AccountDto(
     String currency,
     Long balance,
     Long userId,
-    String description
+    String description,
+    Long parentId,
+    Integer sortOrder,
+    Boolean hidden
 ) {}

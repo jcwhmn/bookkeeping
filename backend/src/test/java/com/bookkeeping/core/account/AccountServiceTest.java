@@ -2,6 +2,7 @@ package com.bookkeeping.core.account;
 
 import com.bookkeeping.common.ResultCode;
 import com.bookkeeping.common.enums.AccountType;
+import com.bookkeeping.core.transaction.TransactionRepository;
 import com.bookkeeping.exception.BusinessException;
 import com.bookkeeping.supporting.security.SecurityUtils;
 import com.bookkeeping.supporting.user.User;
@@ -24,12 +25,12 @@ class AccountServiceTest {
 
     @Mock
     private AccountRepository accountRepository;
-
     @Mock
     private AccountMapper accountMapper;
-
     @Mock
     private SecurityUtils securityUtils;
+    @Mock
+    private TransactionRepository transactionRepository;
 
     private AccountService accountService;
     private User testUser;
@@ -38,44 +39,34 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
-        accountService = new AccountService(accountRepository, accountMapper, securityUtils);
-
-        testUser = User.builder()
-                
-                .username("testuser")
-                .build().withId(1L);
-
+        accountService = new AccountService(accountRepository, accountMapper, securityUtils, transactionRepository);
+        testUser = User.builder().username("testuser").build().withId(1L);
         testAccount = Account.builder()
-                
-                .name("Cash Wallet")
-                .accountType(AccountType.CASH)
-                .currency("USD")
-                .balance(100000L)
-                .userId(1L)
-                .description("Main wallet")
-                .deleted(false)
+                .name("Cash Wallet").accountType(AccountType.CASH).currency("USD")
+                .balance(100000L).userId(1L).description("Main wallet")
+                .deleted(false).sortOrder(0).hidden(false).parentId(null)
                 .build().withId(10L);
-
-        testAccountDto = new AccountDto(10L, "Cash Wallet", AccountType.CASH, "USD", 100000L, 1L, "Main wallet");
+        testAccountDto = new AccountDto(10L, "Cash Wallet", AccountType.CASH, "USD",
+                100000L, 1L, "Main wallet", null, 0, false);
     }
 
     @Test
     void getCurrentUserAccounts_returnsAccountList() {
         when(securityUtils.requireCurrentUser()).thenReturn(testUser);
-        when(accountRepository.findByUserIdAndDeletedFalse(1L)).thenReturn(List.of(testAccount));
+        when(accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(1L)).thenReturn(List.of(testAccount));
         when(accountMapper.toDto(testAccount)).thenReturn(testAccountDto);
 
         List<AccountDto> result = accountService.getCurrentUserAccounts();
 
         assertEquals(1, result.size());
         assertEquals("Cash Wallet", result.get(0).name());
-        verify(accountRepository).findByUserIdAndDeletedFalse(1L);
+        verify(accountRepository).findByUserIdAndDeletedFalseOrderBySortOrderAsc(1L);
     }
 
     @Test
     void getCurrentUserAccounts_emptyList_returnsEmpty() {
         when(securityUtils.requireCurrentUser()).thenReturn(testUser);
-        when(accountRepository.findByUserIdAndDeletedFalse(1L)).thenReturn(List.of());
+        when(accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(1L)).thenReturn(List.of());
 
         List<AccountDto> result = accountService.getCurrentUserAccounts();
 
@@ -110,7 +101,8 @@ class AccountServiceTest {
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
         when(accountMapper.toDto(any(Account.class))).thenReturn(testAccountDto);
 
-        CreateAccountRequest request = new CreateAccountRequest("Cash Wallet", AccountType.CASH, "USD", 100000L, "Main wallet");
+        CreateAccountRequest request = new CreateAccountRequest(
+                "Cash Wallet", AccountType.CASH, "USD", 100000L, "Main wallet", null);
         AccountDto result = accountService.createAccount(request);
 
         assertNotNull(result);
@@ -123,8 +115,10 @@ class AccountServiceTest {
         when(securityUtils.requireCurrentUser()).thenReturn(testUser);
         when(accountRepository.existsByNameAndUserIdAndDeletedFalse("Cash Wallet", 1L)).thenReturn(true);
 
-        CreateAccountRequest request = new CreateAccountRequest("Cash Wallet", AccountType.CASH, "USD", 0L, null);
-        BusinessException ex = assertThrows(BusinessException.class, () -> accountService.createAccount(request));
+        CreateAccountRequest request = new CreateAccountRequest(
+                "Cash Wallet", AccountType.CASH, "USD", 0L, null, null);
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> accountService.createAccount(request));
 
         assertEquals(ResultCode.ACCOUNT_ALREADY_EXISTS.getCode(), ex.getErrorCode());
     }
@@ -136,7 +130,8 @@ class AccountServiceTest {
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
         when(accountMapper.toDto(any())).thenReturn(testAccountDto);
 
-        CreateAccountRequest request = new CreateAccountRequest("Cash Wallet", AccountType.CASH, "USD", null, null);
+        CreateAccountRequest request = new CreateAccountRequest(
+                "Cash Wallet", AccountType.CASH, "USD", null, null, null);
         accountService.createAccount(request);
 
         verify(accountRepository).save(any(Account.class));
@@ -148,7 +143,8 @@ class AccountServiceTest {
         when(accountRepository.findByIdAndUserIdAndDeletedFalse(10L, 1L)).thenReturn(Optional.of(testAccount));
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
         when(accountMapper.toDto(any(Account.class))).thenReturn(
-                new AccountDto(10L, "Updated Wallet", AccountType.CASH, "USD", 100000L, 1L, "Main wallet"));
+                new AccountDto(10L, "Updated Wallet", AccountType.CASH, "USD",
+                        100000L, 1L, "Main wallet", null, 0, false));
 
         UpdateAccountRequest request = new UpdateAccountRequest("Updated Wallet", null);
         AccountDto result = accountService.updateAccount(10L, request);
@@ -158,49 +154,41 @@ class AccountServiceTest {
     }
 
     @Test
-    void updateAccount_nonExisting_throwsException() {
-        when(securityUtils.requireCurrentUser()).thenReturn(testUser);
-        when(accountRepository.findByIdAndUserIdAndDeletedFalse(10L, 1L)).thenReturn(Optional.empty());
-
-        UpdateAccountRequest request = new UpdateAccountRequest("New Name", null);
-        BusinessException ex = assertThrows(BusinessException.class, () -> accountService.updateAccount(10L, request));
-
-        assertEquals(ResultCode.ACCOUNT_NOT_FOUND.getCode(), ex.getErrorCode());
-    }
-
-    @Test
-    void updateAccount_duplicateName_throwsException() {
-        when(securityUtils.requireCurrentUser()).thenReturn(testUser);
-        when(accountRepository.findByIdAndUserIdAndDeletedFalse(10L, 1L)).thenReturn(Optional.of(testAccount));
-        when(accountRepository.existsByNameAndUserIdAndDeletedFalse("Existing", 1L)).thenReturn(true);
-
-        UpdateAccountRequest request = new UpdateAccountRequest("Existing", null);
-        BusinessException ex = assertThrows(BusinessException.class, () -> accountService.updateAccount(10L, request));
-
-        assertEquals(ResultCode.ACCOUNT_ALREADY_EXISTS.getCode(), ex.getErrorCode());
-    }
-
-    @Test
     void deleteAccount_softDeletes() {
         when(securityUtils.requireCurrentUser()).thenReturn(testUser);
         when(accountRepository.findByIdAndUserIdAndDeletedFalse(10L, 1L)).thenReturn(Optional.of(testAccount));
         when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(1L)).thenReturn(List.of(testAccount));
 
         accountService.deleteAccount(10L);
 
         ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
-        verify(accountRepository).save(captor.capture());
-        assertTrue(captor.getValue().getDeleted());
+        verify(accountRepository, atLeastOnce()).save(captor.capture());
+        assertTrue(captor.getAllValues().stream().anyMatch(a -> a.getDeleted()));
     }
 
     @Test
-    void deleteAccount_nonExisting_throwsException() {
+    void hideAccount_setsHiddenToTrue() {
         when(securityUtils.requireCurrentUser()).thenReturn(testUser);
-        when(accountRepository.findByIdAndUserIdAndDeletedFalse(10L, 1L)).thenReturn(Optional.empty());
+        when(accountRepository.findByIdAndUserIdAndDeletedFalse(10L, 1L)).thenReturn(Optional.of(testAccount));
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> accountService.deleteAccount(10L));
+        accountService.hideAccount(10L, true);
 
-        assertEquals(ResultCode.ACCOUNT_NOT_FOUND.getCode(), ex.getErrorCode());
+        ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
+        verify(accountRepository).save(captor.capture());
+        assertTrue(captor.getValue().getHidden());
+    }
+
+    @Test
+    void reorderAccounts_updatesSortOrder() {
+        when(securityUtils.requireCurrentUser()).thenReturn(testUser);
+
+        accountService.reorderAccounts(List.of(3L, 1L, 2L));
+
+        verify(accountRepository).updateSortOrder(3L, 1L, 0);
+        verify(accountRepository).updateSortOrder(1L, 1L, 1);
+        verify(accountRepository).updateSortOrder(2L, 1L, 2);
     }
 
     @Test

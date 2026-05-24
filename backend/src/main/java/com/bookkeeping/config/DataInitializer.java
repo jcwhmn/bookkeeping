@@ -80,7 +80,7 @@ public class DataInitializer implements CommandLineRunner {
     private List<Account> createDemoAccounts(User demoUser) {
         if (accountRepository.count() > 0) {
             log.info("Accounts already exist");
-            return accountRepository.findByUserIdAndDeletedFalse(demoUser.getId());
+            return accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(demoUser.getId());
         }
         createAccount(demoUser, "Cash", AccountType.CASH, "USD", 150000L, "Daily cash expenses");
         createAccount(demoUser, "Bank Checking", AccountType.CHECKING, "USD", 8500000L, "Primary checking");
@@ -88,7 +88,7 @@ public class DataInitializer implements CommandLineRunner {
         createAccount(demoUser, "Credit Card", AccountType.CREDIT, "USD", -350000L, "Monthly credit");
         createAccount(demoUser, "Stock Portfolio", AccountType.INVESTMENT, "USD", 50000000L, "Long-term stock");
         log.info("✓ 5 demo accounts created");
-        return accountRepository.findByUserIdAndDeletedFalse(demoUser.getId());
+        return accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(demoUser.getId());
     }
 
     private List<Category> createDemoCategories(User demoUser) {
@@ -153,6 +153,9 @@ public class DataInitializer implements CommandLineRunner {
                 .userId(user.getId())
                 .description(desc)
                 .deleted(false)
+                .sortOrder(0)
+                .hidden(false)
+                .parentId(null)
                 .build();
         accountRepository.save(a);
     }
