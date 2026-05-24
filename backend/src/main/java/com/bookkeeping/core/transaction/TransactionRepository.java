@@ -95,4 +95,29 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT t FROM Transaction t WHERE t.userId = :userId AND t.id IN :ids")
     List<Transaction> findByUserIdAndIds(@Param("userId") Long userId, @Param("ids") List<Long> ids);
+
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
+           "AND (:startTime IS NULL OR t.transactionTime >= :startTime) " +
+           "AND (:endTime IS NULL OR t.transactionTime < :endTime) " +
+           "AND (:accountId IS NULL OR t.accountId = :accountId)")
+    List<Transaction> searchTransactions(@Param("userId") Long userId,
+                                         @Param("startTime") Long startTime,
+                                         @Param("endTime") Long endTime,
+                                         @Param("accountId") Long accountId,
+                                         @Param("tagIds") List<Long> tagIds,
+                                         @Param("keyword") String keyword);
+
+    @Query("SELECT t FROM Transaction t WHERE t.accountId = :accountId " +
+           "AND (:startTime IS NULL OR t.transactionTime >= :startTime) " +
+           "AND (:endTime IS NULL OR t.transactionTime < :endTime) " +
+           "ORDER BY t.transactionTime DESC")
+    List<Transaction> findByAccountIdAndTimeRange(@Param("accountId") Long accountId,
+                                                  @Param("startTime") Long startTime,
+                                                  @Param("endTime") Long endTime);
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN t.transactionType IN (2, 4) THEN t.amount ELSE 0 END) - " +
+           "SUM(CASE WHEN t.transactionType IN (3, 5) THEN t.amount ELSE 0 END), 0) " +
+           "FROM Transaction t WHERE t.accountId = :accountId " +
+           "AND (:beforeTime IS NULL OR t.transactionTime < :beforeTime)")
+    long sumBalanceBefore(@Param("accountId") Long accountId, @Param("beforeTime") Long beforeTime);
 }

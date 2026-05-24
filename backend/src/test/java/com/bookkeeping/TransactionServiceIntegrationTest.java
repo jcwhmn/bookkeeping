@@ -21,6 +21,7 @@ public class TransactionServiceIntegrationTest {
     private TransactionService transactionService;
     private TransactionRepository transactionRepository;
     private AccountService accountService;
+    private AccountRepository accountRepository;
     private SecurityUtils securityUtils;
     private CategoryService categoryService;
     private TransactionMapper transactionMapper;
@@ -29,6 +30,7 @@ public class TransactionServiceIntegrationTest {
     void setUp() {
         transactionRepository = mock(TransactionRepository.class);
         accountService = mock(AccountService.class);
+        accountRepository = mock(AccountRepository.class);
         securityUtils = mock(SecurityUtils.class);
         categoryService = mock(CategoryService.class);
         transactionMapper = new TransactionDtoMapperConverter();
@@ -37,7 +39,7 @@ public class TransactionServiceIntegrationTest {
         when(securityUtils.requireCurrentUser()).thenReturn(mockUser);
 
         transactionService = new TransactionService(
-            transactionRepository, accountService, securityUtils, categoryService, transactionMapper);
+            transactionRepository, accountService, accountRepository, securityUtils, categoryService, transactionMapper);
     }
 
     @Test

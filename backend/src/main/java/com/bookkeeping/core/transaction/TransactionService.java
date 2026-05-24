@@ -1,6 +1,7 @@
 package com.bookkeeping.core.transaction;
 
 import com.bookkeeping.common.ResultCode;
+import com.bookkeeping.core.account.AccountRepository;
 import com.bookkeeping.core.account.AccountService;
 import com.bookkeeping.core.category.CategoryService;
 import com.bookkeeping.exception.BusinessException;
@@ -20,17 +21,20 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountService accountService;
+    private final AccountRepository accountRepository;
     private final SecurityUtils securityUtils;
     private final CategoryService categoryService;
     private final TransactionMapper transactionMapper;
 
     public TransactionService(TransactionRepository transactionRepository,
                               AccountService accountService,
+                              AccountRepository accountRepository,
                               SecurityUtils securityUtils,
                               CategoryService categoryService,
                               TransactionMapper transactionMapper) {
         this.transactionRepository = transactionRepository;
         this.accountService = accountService;
+        this.accountRepository = accountRepository;
         this.securityUtils = securityUtils;
         this.categoryService = categoryService;
         this.transactionMapper = transactionMapper;
@@ -390,5 +394,20 @@ public class TransactionService {
     private String serializeTagIds(List<Long> tagIds) {
         if (tagIds == null || tagIds.isEmpty()) return null;
         return String.join(",", tagIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.toList()));
+    }
+
+    // === Statistics Helpers ===
+
+    /** Get account balance at a specific point in time */
+    public long getAccountBalanceAt(Long beforeTime, Long userId) {
+        return accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(userId).stream()
+                .mapToLong(acc -> transactionRepository.sumBalanceBefore(acc.getId(), beforeTime))
+                .sum();
+    }
+
+
+    /** Get transactions for an account within a time range */
+    public List<Transaction> listTransactionsInRange(Long accountId, Long startTime, Long endTime) {
+        return transactionRepository.findByAccountIdAndTimeRange(accountId, startTime, endTime);
     }
 }
