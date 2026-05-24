@@ -14,12 +14,15 @@
 5. [x] `pages/statistics.vue` — Trend charts (line/bar), asset trends
 6. [x] `pages/reports.vue` — Reconciliation statement, cash flow
 
-### Sprint 4: Navigation
-7. [x] `layouts/default.vue` — Added Templates to nav
+### Sprint 4: Exchange Rates + Import/Export
+7. [x] `pages/exchange.vue` — Exchange rates with base currency, custom rates
+8. [x] `pages/transactions.vue` — Export dropdown (CSV/TSV), import dialog
 
 ## Summary
-- **14 Vue pages** (was 13, added templates)
-- **Enhanced 4 pages**: profile, tags, transactions, statistics, reports
+- **15 Vue pages** (was 13, added templates + exchange)
+- **Enhanced 6 pages**: profile, tags, transactions, statistics, reports, transactions
 - **Batch operations**: checkbox multi-select, batch dialogs, batch delete
 - **3-mode statistics**: categorical, trends, asset trends
 - **3-tab reports**: summary, cash flow, reconciliation
+- **Import/Export**: dropdown + dialog in transactions page
+- **Exchange rates**: base currency, custom rates, quick reference
