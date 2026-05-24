@@ -51,7 +51,7 @@ class AuthServiceTest {
                 .disabled(false)
                 .build().withId(1L);
 
-        testUserDto = new UserDto(1L, "testuser", "test@example.com", "Test User", "USD", null, "en-US");
+        testUserDto = new UserDto(1L, "testuser", "test@example.com", "Test User", "USD", null, "en-US", null, 1, 1, "YYYY-MM-DD", 1);
     }
 
     private String hashPassword(String password, String salt) {
@@ -150,7 +150,8 @@ class AuthServiceTest {
         when(userMapper.toDto(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             return new UserDto(u.getId(), u.getUsername(), u.getEmail(),
-                    u.getNickname(), u.getDefaultCurrency(), u.getDefaultAccountId(), u.getLanguage());
+                    u.getNickname(), u.getDefaultCurrency(), u.getDefaultAccountId(), u.getLanguage(),
+                    u.getAvatar(), u.getFirstDayOfWeek(), u.getFiscalYearStart(), u.getDateFormat(), u.getTransactionEditScope());
         });
 
         RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password123");

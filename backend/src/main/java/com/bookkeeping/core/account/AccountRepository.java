@@ -32,4 +32,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Modifying
     @Query("UPDATE Account a SET a.hidden = :hidden WHERE a.id = :id AND a.userId = :userId")
     int updateHidden(@Param("id") Long id, @Param("userId") Long userId, @Param("hidden") Boolean hidden);
+
+    long countByUserId(Long userId);
 }

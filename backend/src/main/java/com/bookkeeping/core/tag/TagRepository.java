@@ -22,4 +22,6 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     @Modifying
     @Query("UPDATE Tag t SET t.hidden = :hidden WHERE t.id = :id AND t.userId = :userId")
     int updateHidden(@Param("id") Long id, @Param("userId") Long userId, @Param("hidden") Boolean hidden);
+
+    List<Tag> findByUserId(Long userId);
 }

@@ -44,7 +44,7 @@ public class AuthServiceIntegrationTest {
             return u.toBuilder().build(); // simulate JPA id generation
         });
         when(userMapper.toDto(any(User.class))).thenReturn(
-            new UserDto(1L, "newuser", "new@test.com", "newuser", "USD", null, "en-US"));
+            new UserDto(1L, "newuser", "new@test.com", "newuser", "USD", null, "en-US", null, 1, 1, "YYYY-MM-DD", 1));
 
         RegisterRequest req = new RegisterRequest("newuser", "new@test.com", "pass123");
         UserDto result = authService.register(req);
@@ -64,7 +64,7 @@ public class AuthServiceIntegrationTest {
         User user = createUser("demo", "demo123");
         when(userRepository.findByUsername("demo")).thenReturn(java.util.Optional.of(user));
         when(userMapper.toDto(user)).thenReturn(
-            new UserDto(1L, "demo", "demo@example.com", "Demo", "USD", null, "en-US"));
+            new UserDto(1L, "demo", "demo@example.com", "Demo", "USD", null, "en-US", null, 1, 1, "YYYY-MM-DD", 1));
 
         LoginRequest req = new LoginRequest("demo", "demo123");
         var result = authService.login(req);

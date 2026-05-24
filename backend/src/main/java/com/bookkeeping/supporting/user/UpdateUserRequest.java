@@ -1,22 +1,17 @@
 package com.bookkeeping.supporting.user;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
-/**
- * Request DTO for updating user profile.
- */
 public record UpdateUserRequest(
-    @Size(max = 64, message = "Nickname must be at most 64 characters")
-    String nickname,
-    
-    @Email(message = "Invalid email format")
-    String email,
-    
-    @Size(min = 3, max = 3, message = "Currency must be 3 characters")
+    @Size(max = 64) String nickname,
     String defaultCurrency,
-    
-    @Size(min = 2, max = 10, message = "Language code must be 2-10 characters")
-    String language
+    @Size(min = 2, max = 10) String language,
+    Long defaultAccountId,
+    String avatar,
+    @Min(0) @Max(6) Integer transactionEditScope,
+    @Min(0) @Max(1) Integer firstDayOfWeek,
+    @Min(1) @Max(12) Integer fiscalYearStart,
+    String dateFormat
 ) {}

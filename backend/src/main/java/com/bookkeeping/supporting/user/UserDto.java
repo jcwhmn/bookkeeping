@@ -1,11 +1,8 @@
 package com.bookkeeping.supporting.user;
 
-import com.jcwhmn.annotations.MapperAuto;
 import com.jcwhmn.annotations.Direction;
+import com.jcwhmn.annotations.MapperAuto;
 
-/**
- * User response DTO.
- */
 @MapperAuto(sourceEntity = User.class, direction = Direction.From)
 public record UserDto(
     Long id,
@@ -14,7 +11,10 @@ public record UserDto(
     String nickname,
     String defaultCurrency,
     Long defaultAccountId,
-    String language
-) {
-    // Use UserDtoMapperConverter.toDto(user) for mapping from User entity
-}
+    String language,
+    String avatar,
+    Integer firstDayOfWeek,
+    Integer fiscalYearStart,
+    String dateFormat,
+    Integer transactionEditScope
+) {}

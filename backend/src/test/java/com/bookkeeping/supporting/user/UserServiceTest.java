@@ -124,9 +124,9 @@ class UserServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userMapper.toDto(any(User.class))).thenReturn(
-                new UserDto(1L, "testuser", "test@example.com", "New Nick", "USD", null, "en-US"));
+                new UserDto(1L, "testuser", "test@example.com", "New Nick", "USD", null, "en-US", null, 1, 1, "YYYY-MM-DD", 1));
 
-        UpdateUserRequest request = new UpdateUserRequest("New Nick", null, null, null);
+        UpdateUserRequest request = new UpdateUserRequest("New Nick", null, null, null, null, null, null, null, null);
         UserDto result = userService.updateProfile(1L, request);
 
         assertNotNull(result);
@@ -135,16 +135,19 @@ class UserServiceTest {
     }
 
     @Test
-    void updateProfile_withExistingEmail_throwsException() {
+    void updateProfile_withAvatar_updatesAvatar() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
-        
-        UpdateUserRequest request = new UpdateUserRequest(null, "existing@example.com", null, null);
-        
-        BusinessException exception = assertThrows(BusinessException.class,
-            () -> userService.updateProfile(1L, request));
-        
-        assertEquals(ResultCode.USER_ALREADY_EXISTS.getCode(), exception.getErrorCode());
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userMapper.toDto(any(User.class))).thenReturn(
+                new UserDto(1L, "testuser", "test@example.com", "Test User", "USD", null, "en-US",
+                        "/avatars/new.jpg", 1, 1, "YYYY-MM-DD", 1));
+
+        UpdateUserRequest request = new UpdateUserRequest(null, null, null, null, "/avatars/new.jpg", null, null, null, null);
+        UserDto result = userService.updateProfile(1L, request);
+
+        assertNotNull(result);
+        assertEquals("/avatars/new.jpg", result.avatar());
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
