@@ -56,6 +56,9 @@ public class User extends BaseEntity {
     @Column(name = "transaction_edit_scope")
     private Integer transactionEditScope = 1;
 
+    @Column(name = "onboarding_completed")
+    private Boolean onboardingCompleted = false;
+
     public boolean isActive() {
         return !Boolean.TRUE.equals(disabled);
     }

@@ -66,16 +66,22 @@ public class SecurityConfig {
             // Authorization rules
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (including OPTIONS preflight)
+                // Swagger UI for API documentation
                 .requestMatchers(
                     "/actuator/**",
                     "/api/v1/health",
                     "/api/v1/info",
                     "/api/v1/auth/login",
                     "/api/v1/auth/register",
-                    "/api-docs/**",
+                    "/api/v1/onboarding/**",  // Allow onboarding endpoints
+                    "/doc.html",
+                    "/doc/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
-                    "/v3/api-docs/**"
+                    "/v3/api-docs/**",
+                    "/favicon.ico",
+                    "/static/**",
+                    "/webjars/**"
                 ).permitAll()
                 // All other endpoints require authentication
                 .anyRequest().authenticated())

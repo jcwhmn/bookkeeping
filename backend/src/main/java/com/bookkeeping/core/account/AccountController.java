@@ -116,6 +116,21 @@ public class AccountController {
         return ApiResponse.success(transactionService.batchDelete(request.ids()));
     }
 
+    // === Account Templates (for onboarding) ===
+
+    @GetMapping("/templates.json")
+    @Operation(summary = "Get account templates", description = "Returns pre-built account templates for onboarding")
+    public ApiResponse<List<AccountTemplateResponse>> getTemplates() {
+        return ApiResponse.success(List.of(
+                new AccountTemplateResponse("Cash", 1, "account_balance_wallet", "#4CAF50", "Physical cash on hand"),
+                new AccountTemplateResponse("Bank Account", 2, "account_balance", "#2196F3", "Primary checking/savings account"),
+                new AccountTemplateResponse("Credit Card", 3, "credit_card", "#F44336", "Credit card balance"),
+                new AccountTemplateResponse("Savings", 8, "savings", "#00BCD4", "Savings account"),
+                new AccountTemplateResponse("Investment", 7, "show_chart", "#9C27B0", "Investment portfolio"),
+                new AccountTemplateResponse("Wallet", 4, "payment", "#607D8B", "Virtual/e-wallet")
+        ));
+    }
+
     // === Request DTOs ===
 
     public record HideAccountRequest(long id, boolean hidden) {}
@@ -126,4 +141,11 @@ public class AccountController {
     public record BatchRemoveTagsRequest(List<Long> transactionIds, List<Long> tagIds) {}
     public record BatchClearTagsRequest(List<Long> transactionIds) {}
     public record BatchDeleteRequest(List<Long> ids) {}
+    public record AccountTemplateResponse(
+            String name,
+            int accountType,
+            String icon,
+            String color,
+            String description
+    ) {}
 }
