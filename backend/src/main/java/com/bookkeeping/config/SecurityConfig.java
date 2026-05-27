@@ -73,7 +73,8 @@ public class SecurityConfig {
                     "/api/v1/info",
                     "/api/v1/auth/login",
                     "/api/v1/auth/register",
-                    "/api/v1/onboarding/**",  // Allow onboarding endpoints
+                    "/api/v1/onboarding/**",
+                    "/api/v1/accounts/templates.json",  // Public for onboarding
                     "/doc.html",
                     "/doc/**",
                     "/swagger-ui/**",
