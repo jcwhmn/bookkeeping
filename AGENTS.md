@@ -300,7 +300,6 @@ See `docs/superpowers/adr/` for design decisions:
 
 > **IMPORTANT**: When adding new features or making updates, always update the documentation after confirming the changes.
 
-
 ### Required Documentation Updates
 
 | File | Description | When to Update |
@@ -308,6 +307,7 @@ See `docs/superpowers/adr/` for design decisions:
 | `docs/USER-GUIDE.md` | User-facing documentation with API examples | Add/modify any API endpoint or feature |
 | `docs/ADMIN-GUIDE.md` | Admin guide for deployment, config, troubleshooting | Add/modify configuration, deployment, security |
 | `AGENTS.md` | Development guide (this file) | Add new patterns, conventions, or tech stack changes |
+| `FRONTEND_PAGES.md` | Frontend page reference | Add new UI pages or modify existing ones |
 
 ### Update Checklist
 
@@ -315,8 +315,9 @@ After confirming any feature modification:
 1. [ ] Identify affected API endpoints → Update `USER-GUIDE.md`
 2. [ ] Check if configuration changes → Update `ADMIN-GUIDE.md`
 3. [ ] Check if new patterns/conventions → Update `AGENTS.md`
-4. [ ] Add/update related docs in `docs/` if needed
-5. [ ] Commit all documentation changes with the feature
+4. [ ] Check frontend changes → Update `FRONTEND_PAGES.md`
+5. [ ] Add/update related docs in `docs/` if needed
+6. [ ] Commit all documentation changes with the feature
 
 ### Example: Adding a New API Endpoint
 
