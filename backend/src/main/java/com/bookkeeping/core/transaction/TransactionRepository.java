@@ -47,17 +47,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findByUserIdOrderByTransactionTimeDesc(Long userId);
 
-    @Query("""
-        SELECT t FROM Transaction t
-        WHERE t.userId = :userId
-        AND (:year IS NULL OR FUNCTION('DATE_PART', 'year', TO_TIMESTAMP(t.transactionTime)) = :year)
-        AND (:month IS NULL OR FUNCTION('DATE_PART', 'month', TO_TIMESTAMP(t.transactionTime)) = :month)
-        AND (:accountId IS NULL OR t.accountId = :accountId)
-        AND (:categoryId IS NULL OR t.categoryId = :categoryId)
-        AND (:transactionType IS NULL OR t.transactionType = :transactionType)
-        AND (:search IS NULL OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')))
-        ORDER BY t.transactionTime DESC
-        """)
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
+           "AND (:year IS NULL OR EXTRACT(YEAR FROM CAST(FROM_UNIXTIME(t.transactionTime) AS timestamp)) = :year) " +
+           "AND (:month IS NULL OR EXTRACT(MONTH FROM CAST(FROM_UNIXTIME(t.transactionTime) AS timestamp)) = :month) " +
+           "AND (:accountId IS NULL OR t.accountId = :accountId) " +
+           "AND (:categoryId IS NULL OR t.categoryId = :categoryId) " +
+           "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
+           "AND (:search IS NULL OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "ORDER BY t.transactionTime DESC")
     List<Transaction> findWithFilters(@Param("userId") Long userId,
                                        @Param("year") Integer year,
                                        @Param("month") Integer month,
@@ -67,16 +64,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                                        @Param("search") String search,
                                        org.springframework.data.domain.Pageable pageable);
 
-    @Query("""
-        SELECT COUNT(t) FROM Transaction t
-        WHERE t.userId = :userId
-        AND (:year IS NULL OR FUNCTION('DATE_PART', 'year', TO_TIMESTAMP(t.transactionTime)) = :year)
-        AND (:month IS NULL OR FUNCTION('DATE_PART', 'month', TO_TIMESTAMP(t.transactionTime)) = :month)
-        AND (:accountId IS NULL OR t.accountId = :accountId)
-        AND (:categoryId IS NULL OR t.categoryId = :categoryId)
-        AND (:transactionType IS NULL OR t.transactionType = :transactionType)
-        AND (:search IS NULL OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')))
-        """)
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.userId = :userId " +
+           "AND (:year IS NULL OR EXTRACT(YEAR FROM CAST(FROM_UNIXTIME(t.transactionTime) AS timestamp)) = :year) " +
+           "AND (:month IS NULL OR EXTRACT(MONTH FROM CAST(FROM_UNIXTIME(t.transactionTime) AS timestamp)) = :month) " +
+           "AND (:accountId IS NULL OR t.accountId = :accountId) " +
+           "AND (:categoryId IS NULL OR t.categoryId = :categoryId) " +
+           "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
+           "AND (:search IS NULL OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%')))")
     long countWithFilters(@Param("userId") Long userId,
                           @Param("year") Integer year,
                           @Param("month") Integer month,

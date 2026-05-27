@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * OpenAPI 3.0 configuration for Swagger UI.
- * Uses SpringDoc for automatic API documentation.
+ * Provides API documentation at /doc.html
  */
 @Configuration
 public class OpenApiConfig {
@@ -30,12 +30,12 @@ public class OpenApiConfig {
         
         return new OpenAPI()
             .info(new Info()
-                .title("Bookkeeping API")
-                .version("0.1.0")
-                .description("Personal bookkeeping application API for managing accounts, transactions, and categories")
+                .title("ezBookkeeping API")
+                .version("1.0.0")
+                .description("Personal bookkeeping application REST API for managing accounts, transactions, categories, budgets, and more.")
                 .contact(new Contact()
-                    .name("Bookkeeping Team")
-                    .email("support@bookkeeping.app"))
+                    .name("jcwhmn")
+                    .url("https://github.com/jcwhmn/bookkeeping"))
                 .license(new License()
                     .name("MIT License")
                     .url("https://opensource.org/licenses/MIT")))

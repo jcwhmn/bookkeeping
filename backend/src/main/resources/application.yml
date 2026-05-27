@@ -22,7 +22,25 @@ jwt:
   refresh-token-expiry: 2592000
 
 springdoc:
-  api-docs:
-    path: /api-docs
+  enable: true
   swagger-ui:
-    path: /swagger-ui.html
+    enabled: true
+    path: /swagger-ui.html  # Keep default path for springdoc config
+  openapi:
+    title: ezBookkeeping API
+    description: Personal bookkeeping application REST API
+    version: 1.0.0
+    contact:
+      name: jcwhmn
+      url: https://github.com/jcwhmn/bookkeeping
+    group:
+      Authentication:
+        paths: /api/v1/auth/**, /api/forget_password/**, /oauth2/**
+      Users:
+        paths: /api/v1/users/**
+      Transactions:
+        paths: /api/v1/transactions/**, /api/v1/tags/**
+      Data:
+        paths: /api/v1/data/**
+      Other:
+        paths: /api/v1/accounts/**, /api/v1/categories/**, /api/v1/budgets/**, /api/v1/exchange/**, /api/v1/templates/**, /api/v1/insights/**, /api/v1/tokens/**
