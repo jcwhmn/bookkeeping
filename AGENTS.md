@@ -295,3 +295,57 @@ See `docs/superpowers/adr/` for design decisions:
 - ADR-006: Version Strategy
 - ADR-007: Base Patterns
 - ADR-008: Backend Dependencies
+
+## Documentation Update Rule
+
+> **IMPORTANT**: When adding new features or making updates, always update the documentation after confirming the changes.
+
+
+### Required Documentation Updates
+
+| File | Description | When to Update |
+|------|-------------|----------------|
+| `docs/USER-GUIDE.md` | User-facing documentation with API examples | Add/modify any API endpoint or feature |
+| `docs/ADMIN-GUIDE.md` | Admin guide for deployment, config, troubleshooting | Add/modify configuration, deployment, security |
+| `AGENTS.md` | Development guide (this file) | Add new patterns, conventions, or tech stack changes |
+
+### Update Checklist
+
+After confirming any feature modification:
+1. [ ] Identify affected API endpoints → Update `USER-GUIDE.md`
+2. [ ] Check if configuration changes → Update `ADMIN-GUIDE.md`
+3. [ ] Check if new patterns/conventions → Update `AGENTS.md`
+4. [ ] Add/update related docs in `docs/` if needed
+5. [ ] Commit all documentation changes with the feature
+
+### Example: Adding a New API Endpoint
+
+```markdown
+// In USER-GUIDE.md, add:
+
+### X.X New Feature
+
+**接口**: `POST /api/v1/new-feature`
+
+**请求示例**:
+```json
+{
+  "name": "example",
+  "value": 100
+}
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "result": {
+    "id": 1,
+    "name": "example",
+    "value": 100
+  }
+}
+```
+
+// In ADMIN-GUIDE.md, add to relevant section if config needed
+```
