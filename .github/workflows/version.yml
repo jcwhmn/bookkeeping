@@ -1,0 +1,70 @@
+# =============================================================================
+# Auto Versioning & Tagging
+# Creates semantic version tags on push to main
+# Format: v{year}.{month}.{patch} e.g., v2605.1, v2605.2
+# =============================================================================
+
+name: Version & Tag
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  version:
+    name: Create Version Tag
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.tag.outputs.new_tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: tag
+        run: |
+          # Get the latest tag matching pattern v{YY}{MM}.*
+          latest=$(git tag --list 'v[0-9][0-9][0-9][0-9][0-9][0-9].*' --sort=-v:refname | head -1)
+          
+          # Current date for new version
+          year=$(date +%y)
+          month=$(date +%m)
+          prefix="${year}${month}"
+          
+          if [ -z "$latest" ]; then
+            # No existing tags, start with first version of this month
+            patch=1
+          else
+            # Extract patch number from latest tag
+            latest_prefix=$(echo "$latest" | sed 's/v\([0-9]*\).*/\1/')
+            if [ "$latest_prefix" = "$prefix" ]; then
+              # Same month, increment patch
+              latest_patch=$(echo "$latest" | sed 's/v[0-9][0-9][0-9][0-9][0-9][0-9].//')
+              patch=$((latest_patch + 1))
+            else
+              # New month, reset patch
+              patch=1
+            fi
+          fi
+          
+          new_tag="v${prefix}.${patch}"
+          version="${year}0${month}.${patch}"
+          
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          
+          echo "📦 Latest tag: ${latest:-none}"
+          echo "🏷️  New tag: $new_tag"
+          echo "📋 Version: $version"
+
+      - name: Create Git Tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag -a ${{ steps.tag.outputs.new_tag }} -m "Release ${{ steps.tag.outputs.new_tag }}: Auto-generated from commit $(git rev-parse --short HEAD)"
+          git push origin ${{ steps.tag.outputs.new_tag }}
+          
+          echo "✅ Tag ${{ steps.tag.outputs.new_tag }} created and pushed"

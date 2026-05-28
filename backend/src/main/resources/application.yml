@@ -1,6 +1,6 @@
 spring:
   application:
-    name: bookkeeping
+    name: Bookkeeping
   profiles:
     active: dev
 
@@ -28,6 +28,18 @@ springdoc:
   scalar:
     enabled: true
     path: /scalar
+
+# Application version (injected by CI/CD)
+app:
+  name: Bookkeeping
+  version: ${APP_VERSION:dev}
+  build-time: ${BUILD_TIME:unknown}
+
+# LLM configuration (for receipt recognition)
+llm:
+  provider: ${LLM_PROVIDER:none}
+  api-key: ${LLM_API_KEY:}
+  endpoint: ${LLM_ENDPOINT:}
   api-docs:
     enabled: true
     path: /v3/api-docs

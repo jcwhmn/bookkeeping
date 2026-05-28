@@ -1,6 +1,23 @@
 <!-- pages/app-settings.vue — Application Settings Page -->
 <template>
   <div style="max-width: 900px; margin: 0 auto">
+    <!-- Version Info Bar -->
+    <v-alert v-if="appInfo" type="info" variant="tonal" class="mb-4 rounded-lg" density="compact">
+      <div class="d-flex align-center justify-space-between">
+        <div class="d-flex align-center">
+          <v-icon start size="18">mdi-information</v-icon>
+          <span class="text-body-2">{{ appInfo.name }}</span>
+        </div>
+        <div class="d-flex align-center">
+          <v-chip size="small" variant="outlined" class="mr-2">
+            <v-icon start size="14">mdi-tag</v-icon>
+            v{{ appInfo.version }}
+          </v-chip>
+          <span class="text-caption text-grey">Built: {{ appInfo.buildTime }}</span>
+        </div>
+      </div>
+    </v-alert>
+
     <div class="d-flex align-center mb-4">
       <h1 class="text-h4 font-weight-bold">Application Settings</h1>
       <v-spacer />
@@ -163,12 +180,14 @@ const api = useApi()
 
 interface Account { id: number; name: string }
 interface Category { id: number; name: string }
+interface AppInfo { name: string; version: string; buildTime: string }
 
 const activeTab = ref('basic')
 const saving = ref(false)
 const snackbar = ref(false)
 const accounts = ref<Account[]>([])
 const categories = ref<Category[]>([])
+const appInfo = ref<AppInfo | null>(null)
 
 const settings = reactive({
   showAccountBalances: true,
@@ -240,10 +259,13 @@ function clearAllCache() {
 }
 
 onMounted(async () => {
-  const [acc, cats] = await Promise.all([
+  // Fetch app info and user data in parallel
+  const [info, acc, cats] = await Promise.all([
+    api.get<AppInfo>('/info').catch(() => null),
     api.get<Account[]>('/accounts'),
     api.get<Category[]>('/categories'),
   ])
+  if (info) appInfo.value = info
   accounts.value = acc
   categories.value = cats
 })
