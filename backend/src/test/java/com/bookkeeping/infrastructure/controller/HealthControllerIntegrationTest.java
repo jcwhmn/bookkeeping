@@ -16,6 +16,9 @@ class HealthControllerIntegrationTest {
     @Autowired
     private HealthController healthController;
 
+    @Autowired
+    private InfoController infoController;
+
     @Test
     void healthEndpoint_returnsUp() {
         Map<String, String> response = healthController.health();
@@ -26,9 +29,11 @@ class HealthControllerIntegrationTest {
 
     @Test
     void infoEndpoint_returnsApiInfo() {
-        Map<String, Object> response = healthController.info();
+        var response = infoController.getInfo();
         
-        assertEquals("Bookkeeping API", response.get("name"));
-        assertEquals("0.1.0", response.get("version"));
+        assertTrue(response.isSuccess());
+        assertNotNull(response.result());
+        assertNotNull(response.result().name());
+        assertNotNull(response.result().version());
     }
 }

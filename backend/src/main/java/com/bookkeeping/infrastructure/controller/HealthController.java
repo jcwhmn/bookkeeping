@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * Health check controller for OpenAPI verification.
+ * Health check controller.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -21,18 +21,7 @@ public class HealthController {
     public Map<String, String> health() {
         return Map.of(
             "service", "bookkeeping",
-            "status", "UP",
-            "version", "0.1.0"
-        );
-    }
-
-    @Operation(summary = "API info", description = "Returns API information")
-    @GetMapping("/info")
-    public Map<String, Object> info() {
-        return Map.of(
-            "name", "Bookkeeping API",
-            "version", "0.1.0",
-            "description", "Personal bookkeeping application API"
+            "status", "UP"
         );
     }
 }

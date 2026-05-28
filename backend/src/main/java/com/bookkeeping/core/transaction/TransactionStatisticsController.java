@@ -49,13 +49,4 @@ public class TransactionStatisticsController {
             @RequestParam(required = false) Long end_time) {
         return ApiResponse.success(statisticsService.getAssetTrends(start_time, end_time));
     }
-
-    @GetMapping("/reconciliation_statements.json")
-    @Operation(summary = "Get reconciliation statement")
-    public ApiResponse<TransactionStatisticsService.ReconciliationStatement> getReconciliationStatement(
-            @RequestParam Long account_id,
-            @RequestParam(required = false) Long start_time,
-            @RequestParam(required = false) Long end_time) {
-        return ApiResponse.success(statisticsService.getReconciliationStatement(account_id, start_time, end_time));
-    }
 }
