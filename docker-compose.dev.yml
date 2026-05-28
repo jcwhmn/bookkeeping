@@ -1,0 +1,24 @@
+# Dev-specific docker compose override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+version: '3.8'
+
+services:
+  postgresql:
+    image: postgres:18.3
+    container_name: bookkeeping-db-dev
+    environment:
+      - POSTGRES_USER=bookkeeping
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=bookkeeping
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - 127.0.0.1:5433:5432
+    volumes:
+      - postgresql_dev_data:/var/lib/postgresql/data
+
+volumes:
+  postgresql_dev_data:

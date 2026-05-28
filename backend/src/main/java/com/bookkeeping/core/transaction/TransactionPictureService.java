@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -117,6 +118,16 @@ public class TransactionPictureService {
         try {
             Files.deleteIfExists(Paths.get(picture.getFilePath()));
         } catch (IOException ignored) {}
+    }
+
+    /**
+     * Get picture file for serving.
+     */
+    @Transactional(readOnly = true)
+    public Optional<TransactionPicture> getFile(Long pictureId) {
+        Long userId = securityUtils.requireCurrentUser().getId();
+        return pictureRepository.findByIdAndUserIdAndDeletedFalse(pictureId, userId)
+                .filter(p -> Files.exists(Paths.get(p.getFilePath())));
     }
 
     /**

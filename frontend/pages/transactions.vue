@@ -231,6 +231,28 @@
 
           <!-- Notes -->
           <v-text-field v-model="form.description" label="Notes" variant="outlined" density="comfortable" :rules="[required]" />
+
+          <!-- Pictures -->
+          <div class="mt-4">
+            <div class="d-flex align-center mb-2">
+              <v-icon start size="small" color="grey">mdi-image</v-icon>
+              <span class="text-caption text-grey">Receipts / Pictures</span>
+              <v-spacer />
+              <v-btn size="x-small" variant="text" color="primary" @click="triggerPictureUpload">
+                <v-icon start size="small">mdi-plus</v-icon> Add Picture
+              </v-btn>
+              <input ref="pictureInput" type="file" accept="image/*" class="d-none" @change="onPictureSelected" />
+            </div>
+            <div v-if="pictures.length > 0" class="d-flex flex-wrap gap-2">
+              <div v-for="pic in pictures" :key="pic.id" class="picture-thumb" style="position: relative;">
+                <v-img :src="'/api/v1/transaction/pictures/' + pic.id + '/file'" width="80" height="80" cover class="rounded" />
+                <v-btn icon="mdi-close" size="x-small" color="error" variant="flat" style="position: absolute; top: -8px; right: -8px;" @click="removePicture(pic.id)" />
+              </div>
+            </div>
+            <div v-else class="text-caption text-grey-light text-center pa-3 rounded" style="border: 1px dashed grey;">
+              No pictures attached
+            </div>
+          </div>
         </v-card-text>
         <v-card-actions class="pa-4 pt-0">
           <v-btn v-if="editingTx" variant="text" color="error" @click="confirmDelete(editingTx)">Delete</v-btn>
@@ -418,6 +440,49 @@ const showLLMDialog = ref(false)
 const llmFile = ref<File | null>(null)
 const llmResult = ref<any>(null)
 const llmLoading = ref(false)
+
+// Picture upload
+const pictureInput = ref<HTMLInputElement | null>(null)
+const pictures = ref<{ id: number; fileName: string }[]>([])
+const uploadingPic = ref(false)
+
+function triggerPictureUpload() {
+  pictureInput.value?.click()
+}
+
+async function onPictureSelected(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file || !editingTx.value) return
+  uploadingPic.value = true
+  try {
+    const fd = new FormData()
+    fd.append('transaction_id', editingTx.value.id.toString())
+    fd.append('file', file)
+    const result = await api.post('/transaction/pictures/upload.json', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    pictures.value.push({ id: result.id, fileName: result.fileName })
+  } catch (e) { console.error('Upload failed:', e) }
+  finally { uploadingPic.value = false }
+}
+
+async function removePicture(pictureId: number) {
+  try {
+    await api.post('/transaction/pictures/remove.json', null, {
+      params: { picture_id: pictureId }
+    })
+    pictures.value = pictures.value.filter(p => p.id !== pictureId)
+  } catch (e) { console.error('Remove failed:', e) }
+}
+
+async function loadPictures(transactionId: number) {
+  try {
+    const pics = await api.get<{ id: number; fileName: string }[]>('/transaction/pictures/list.json', {
+      params: { transaction_id: transactionId }
+    })
+    pictures.value = pics
+  } catch (e) { pictures.value = [] }
+}
 
 function exportData(format: string) {
   let url = `/api/v1/data/export.${format}`
@@ -650,6 +715,8 @@ function openEdit(tx: Tx) {
   form.time = d.toTimeString().slice(0, 5)
   
   amountStr.value = (tx.amount / 100).toString()
+  pictures.value = []
+  loadPictures(tx.id)
   dialog.value = true
 }
 

@@ -4,10 +4,13 @@ import com.bookkeeping.common.ApiResponse;
 import com.bookkeeping.supporting.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -39,6 +42,16 @@ public class TransactionPictureController {
     @Operation(summary = "List pictures for a transaction")
     public ApiResponse<List<TransactionPictureDto>> list(@RequestParam("transaction_id") Long transactionId) {
         return ApiResponse.success(pictureService.listByTransaction(transactionId));
+    }
+
+    @GetMapping("/{pictureId}/file")
+    @Operation(summary = "Get picture file")
+    public ResponseEntity<FileSystemResource> getFile(@PathVariable Long pictureId) {
+        return pictureService.getFile(pictureId)
+                .map(file -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(file.getMimeType() != null ? file.getMimeType() : "image/jpeg"))
+                        .body(new FileSystemResource(file.getFilePath())))
+                .orElse(ResponseEntity.notFound().<FileSystemResource>build());
     }
 
     @PostMapping("/remove.json")

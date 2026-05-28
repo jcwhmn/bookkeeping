@@ -1,0 +1,21 @@
+services:
+  bookkeeping-db:
+    image: postgres:18.3
+    container_name: bookkeeping-db
+    environment:
+      POSTGRES_USER: bookkeeping
+      POSTGRES_PASSWORD: test123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookkeeping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
