@@ -31,4 +31,17 @@ public class Category extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean hidden = false;
+
+    // === Setters for updates ===
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setHidden(Boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 }

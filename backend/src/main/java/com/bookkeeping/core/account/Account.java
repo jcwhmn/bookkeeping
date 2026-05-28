@@ -58,4 +58,29 @@ public class Account extends BaseEntity {
     /** If true, account is hidden from UI. */
     @Column(nullable = false)
     private Boolean hidden = false;
+
+    // === Setters for updates (no public setters in this project) ===
+    public void setBalance(Long balance) {
+        this.balance = balance;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public void setHidden(Boolean hidden) {
+        this.hidden = hidden;
+    }
+
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 }
