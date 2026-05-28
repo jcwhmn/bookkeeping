@@ -75,6 +75,16 @@ public class User extends BaseEntity {
     public void setRecoveryCodes(String recoveryCodes) { this.recoveryCodes = recoveryCodes; }
     
     // ============ User Setters ============
+    public void setUsername(String username) { this.username = username; }
+    public void setEmail(String email) { this.email = email; }
+    public void setNickname(String nickname) { this.nickname = nickname; }
+    public void setPassword(String password) { this.password = password; }
+    public void setSalt(String salt) { this.salt = salt; }
+    public void setDefaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; }
+    public void setLanguage(String language) { this.language = language; }
+    public void setEmailVerified(Boolean emailVerified) { this.emailVerified = emailVerified; }
+    public void setDisabled(Boolean disabled) { this.disabled = disabled; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
     public void setOnboardingCompleted(Boolean onboardingCompleted) { this.onboardingCompleted = onboardingCompleted; }
     
     public boolean isActive() {

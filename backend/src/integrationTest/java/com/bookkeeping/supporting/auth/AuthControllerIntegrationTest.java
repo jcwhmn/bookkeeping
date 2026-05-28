@@ -49,16 +49,17 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     private User createTestUser(String username, String password) {
         String salt = "salt123";
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(username + "@example.com");
-        user.setNickname("Test User");
-        user.setSalt(salt);
-        user.setPassword(hashPassword(password, salt));
-        user.setDefaultCurrency("USD");
-        user.setLanguage("en-US");
-        user.setEmailVerified(true);
-        user.setDisabled(false);
+        User user = User.builder()
+                .username(username)
+                .email(username + "@example.com")
+                .nickname("Test User")
+                .salt(salt)
+                .password(hashPassword(password, salt))
+                .defaultCurrency("USD")
+                .language("en-US")
+                .emailVerified(true)
+                .disabled(false)
+                .build();
         return userRepository.save(user);
     }
 
