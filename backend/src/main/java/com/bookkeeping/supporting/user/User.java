@@ -86,6 +86,11 @@ public class User extends BaseEntity {
     public void setDisabled(Boolean disabled) { this.disabled = disabled; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
     public void setOnboardingCompleted(Boolean onboardingCompleted) { this.onboardingCompleted = onboardingCompleted; }
+    public void setDefaultAccountId(Long defaultAccountId) { this.defaultAccountId = defaultAccountId; }
+    public void setTransactionEditScope(Integer transactionEditScope) { this.transactionEditScope = transactionEditScope; }
+    public void setFirstDayOfWeek(Integer firstDayOfWeek) { this.firstDayOfWeek = firstDayOfWeek; }
+    public void setFiscalYearStart(Integer fiscalYearStart) { this.fiscalYearStart = fiscalYearStart; }
+    public void setDateFormat(String dateFormat) { this.dateFormat = dateFormat; }
     
     public boolean isActive() {
         return !Boolean.TRUE.equals(disabled);

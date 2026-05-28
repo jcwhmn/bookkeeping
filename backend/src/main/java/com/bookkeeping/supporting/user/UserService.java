@@ -67,20 +67,17 @@ public class UserService {
     public UserDto updateProfile(Long userId, UpdateUserRequest request) {
         User user = getById(userId);
 
-        User.UserBuilder builder = user.toBuilder();
-        if (request.nickname() != null) builder.nickname(request.nickname());
-        if (request.defaultCurrency() != null) builder.defaultCurrency(request.defaultCurrency());
-        if (request.language() != null) builder.language(request.language());
-        if (request.defaultAccountId() != null) builder.defaultAccountId(request.defaultAccountId());
-        if (request.avatar() != null) builder.avatar(request.avatar());
-        if (request.transactionEditScope() != null)
-            builder.transactionEditScope(request.transactionEditScope());
-        if (request.firstDayOfWeek() != null)
-            builder.firstDayOfWeek(request.firstDayOfWeek());
-        if (request.fiscalYearStart() != null)
-            builder.fiscalYearStart(request.fiscalYearStart());
-        if (request.dateFormat() != null)
-            builder.dateFormat(request.dateFormat());
-        return userMapper.toDto(save(builder.build()));
+        // Update fields directly on the attached entity
+        if (request.nickname() != null) user.setNickname(request.nickname());
+        if (request.defaultCurrency() != null) user.setDefaultCurrency(request.defaultCurrency());
+        if (request.language() != null) user.setLanguage(request.language());
+        if (request.defaultAccountId() != null) user.setDefaultAccountId(request.defaultAccountId());
+        if (request.avatar() != null) user.setAvatar(request.avatar());
+        if (request.transactionEditScope() != null) user.setTransactionEditScope(request.transactionEditScope());
+        if (request.firstDayOfWeek() != null) user.setFirstDayOfWeek(request.firstDayOfWeek());
+        if (request.fiscalYearStart() != null) user.setFiscalYearStart(request.fiscalYearStart());
+        if (request.dateFormat() != null) user.setDateFormat(request.dateFormat());
+        
+        return userMapper.toDto(userRepository.save(user));
     }
 }

@@ -72,13 +72,14 @@ class SecurityConfigIntegrationTest {
 
     @Test
     void swaggerUiEndpoint_isPubliclyAccessible() {
-        ResponseEntity<String> response = restTemplate.getForEntity(baseUrl() + "/swagger-ui/index.html", String.class);
+        // Swagger UI is disabled, but /scalar should be available
+        ResponseEntity<String> response = restTemplate.getForEntity(baseUrl() + "/scalar", String.class);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
     void apiDocsEndpoint_isPubliclyAccessible() {
-        ResponseEntity<String> response = restTemplate.getForEntity(baseUrl() + "/api-docs", String.class);
+        ResponseEntity<String> response = restTemplate.getForEntity(baseUrl() + "/v3/api-docs", String.class);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 }

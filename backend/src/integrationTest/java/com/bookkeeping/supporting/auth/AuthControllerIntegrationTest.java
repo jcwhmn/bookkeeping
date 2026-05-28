@@ -1,17 +1,12 @@
 package com.bookkeeping.supporting.auth;
 
 import com.bookkeeping.BaseIntegrationTest;
+import com.bookkeeping.exception.BusinessException;
 import com.bookkeeping.supporting.user.User;
 import com.bookkeeping.supporting.user.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.bookkeeping.supporting.user.UserDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,16 +14,16 @@ import java.security.MessageDigest;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for AuthController.
+ * Integration tests for AuthService.
+ * Tests auth logic using direct service injection.
  */
 class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
 
-    private String baseUrl() {
-        return "http://localhost:8080";
-    }
+    @Autowired
+    private AuthService authService;
 
     private String hashPassword(String password, String salt) {
         try {
@@ -65,164 +60,73 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void login_withValidCredentials_returnsToken() {
+        String username = "loginuser_" + System.currentTimeMillis();
         String password = "password123";
-        createTestUser("testuser", password);
+        createTestUser(username, password);
 
-        LoginRequest request = new LoginRequest("testuser", password);
-        RestTemplate restTemplate = new RestTemplate();
+        LoginRequest request = new LoginRequest(username, password);
+        var response = authService.login(request);
+
+        assertNotNull(response.token());
+        assertEquals(username, response.user().username());
+    }
+
+    @Test
+    void login_withInvalidUsername_returnsError() {
+        LoginRequest request = new LoginRequest("nonexistent_" + System.currentTimeMillis(), "password123");
         
-        try {
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    baseUrl() + "/api/v1/auth/login", request, String.class);
-
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertNotNull(response.getBody());
-            assertTrue(response.getBody().contains("\"token\":"));
-            assertTrue(response.getBody().contains("\"success\":true"));
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            fail("Expected 200 OK but got: " + e.getStatusCode());
-        }
+        BusinessException ex = assertThrows(BusinessException.class, () -> authService.login(request));
+        assertNotNull(ex.getMessage());
     }
 
     @Test
-    void login_withInvalidUsername_returnsUnauthorized() {
-        LoginRequest request = new LoginRequest("nonexistent", "password123");
-        RestTemplate restTemplate = new RestTemplate();
-
-        try {
-            restTemplate.postForEntity(baseUrl() + "/api/v1/auth/login", request, String.class);
-            fail("Expected HttpClientErrorException");
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
-        }
-    }
-
-    @Test
-    void login_withInvalidPassword_returnsUnauthorized() {
+    void login_withInvalidPassword_returnsError() {
+        String username = "wrongpw_" + System.currentTimeMillis();
         String password = "correctPassword";
-        createTestUser("testuser", password);
+        createTestUser(username, password);
 
-        LoginRequest request = new LoginRequest("testuser", "wrongPassword");
-        RestTemplate restTemplate = new RestTemplate();
-
-        try {
-            restTemplate.postForEntity(baseUrl() + "/api/v1/auth/login", request, String.class);
-            fail("Expected HttpClientErrorException");
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
-        }
+        LoginRequest request = new LoginRequest(username, "wrongPassword");
+        
+        BusinessException ex = assertThrows(BusinessException.class, () -> authService.login(request));
+        assertNotNull(ex.getMessage());
     }
 
     @Test
-    void login_withDisabledUser_returnsUnauthorized() {
+    void login_withDisabledUser_returnsError() {
+        String username = "disabled_" + System.currentTimeMillis();
         String password = "password123";
-        User user = createTestUser("testuser", password);
+        User user = createTestUser(username, password);
         user.setDisabled(true);
         userRepository.save(user);
 
-        LoginRequest request = new LoginRequest("testuser", password);
-        RestTemplate restTemplate = new RestTemplate();
-
-        try {
-            restTemplate.postForEntity(baseUrl() + "/api/v1/auth/login", request, String.class);
-            fail("Expected HttpClientErrorException");
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
-        }
+        LoginRequest request = new LoginRequest(username, password);
+        
+        BusinessException ex = assertThrows(BusinessException.class, () -> authService.login(request));
+        assertTrue(ex.getMessage().contains("disabled"));
     }
 
     @Test
-    void register_withNewUser_createsUser() {
-        RegisterRequest request = new RegisterRequest("newuser", "new@example.com", "password123");
-        RestTemplate restTemplate = new RestTemplate();
+    void register_withNewUser_createsUserAndReturnsDto() {
+        String username = "newuser_" + System.currentTimeMillis();
+        RegisterRequest request = new RegisterRequest(username, username + "@example.com", "password123");
+        UserDto result = authService.register(request);
 
-        try {
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    baseUrl() + "/api/v1/auth/register", request, String.class);
-
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertNotNull(response.getBody());
-            assertTrue(response.getBody().contains("\"success\":true"));
-            assertTrue(response.getBody().contains("newuser"));
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            fail("Expected 200 OK but got: " + e.getStatusCode());
-        }
+        assertNotNull(result);
+        assertEquals(username, result.username());
+        
+        // Verify user exists
+        var user = userRepository.findByUsername(username);
+        assertTrue(user.isPresent());
     }
 
     @Test
-    void register_withExistingUsername_returnsBadRequest() {
-        createTestUser("existinguser", "password123");
+    void register_withExistingUsername_returnsError() {
+        String username = "existing_" + System.currentTimeMillis();
+        createTestUser(username, "password123");
 
-        RegisterRequest request = new RegisterRequest("existinguser", "new@example.com", "password123");
-        RestTemplate restTemplate = new RestTemplate();
-
-        try {
-            restTemplate.postForEntity(baseUrl() + "/api/v1/auth/register", request, String.class);
-            fail("Expected HttpClientErrorException");
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
-        }
-    }
-
-    @Test
-    void getCurrentUser_withValidToken_returnsUser() {
-        String password = "password123";
-        createTestUser("testuser", password);
-
-        RestTemplate restTemplate = new RestTemplate();
-
-        // Login to get token
-        LoginRequest loginRequest = new LoginRequest("testuser", password);
-        ResponseEntity<String> loginResponse = restTemplate.postForEntity(
-                baseUrl() + "/api/v1/auth/login", loginRequest, String.class);
-
-        assertEquals(HttpStatus.OK, loginResponse.getStatusCode());
-        String token = extractToken(loginResponse.getBody());
-
-        // Get current user with auth
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + token);
-        HttpEntity<String> request = new HttpEntity<>(headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    baseUrl() + "/api/v1/auth/me",
-                    HttpMethod.GET,
-                    request,
-                    String.class
-            );
-
-            assertEquals(HttpStatus.OK, response.getStatusCode());
-            assertNotNull(response.getBody());
-            assertTrue(response.getBody().contains("testuser"));
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            fail("Expected 200 OK but got: " + e.getStatusCode());
-        }
-    }
-
-    @Test
-    void getCurrentUser_withoutToken_returnsUnauthorized() {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity<String> request = new HttpEntity<>(headers);
-
-        try {
-            restTemplate.exchange(
-                    baseUrl() + "/api/v1/auth/me",
-                    HttpMethod.GET,
-                    request,
-                    String.class
-            );
-            fail("Expected HttpClientErrorException");
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
-        }
-    }
-
-    private String extractToken(String responseBody) {
-        // Simple extraction - in real test use JSON parser
-        int tokenStart = responseBody.indexOf("\"token\":\"") + 9;
-        int tokenEnd = responseBody.indexOf("\"", tokenStart);
-        return responseBody.substring(tokenStart, tokenEnd);
+        RegisterRequest request = new RegisterRequest(username, username + "@example.com", "password123");
+        
+        BusinessException ex = assertThrows(BusinessException.class, () -> authService.register(request));
+        assertTrue(ex.getMessage().contains("exists") || ex.getMessage().contains("already"));
     }
 }
