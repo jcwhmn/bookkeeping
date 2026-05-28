@@ -77,6 +77,7 @@ public class SecurityConfig {
                     "/api/v1/accounts/templates.json",  // Public for onboarding
                     "/doc.html",
                     "/doc/**",
+                    "/scalar/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",

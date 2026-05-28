@@ -4,31 +4,56 @@ import com.bookkeeping.common.ApiResponse;
 import com.bookkeeping.supporting.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/transaction/pictures")
-@Tag(name = "Transaction Pictures", description = "Transaction picture management APIs")
+@Tag(name = "Transaction Pictures", description = "Transaction picture management")
 public class TransactionPictureController {
 
-    private final TransactionPictureRepository pictureRepository;
+    private final TransactionPictureService pictureService;
     private final SecurityUtils securityUtils;
 
-    public TransactionPictureController(TransactionPictureRepository pictureRepository,
-                                       SecurityUtils securityUtils) {
-        this.pictureRepository = pictureRepository;
+    public TransactionPictureController(TransactionPictureService pictureService, SecurityUtils securityUtils) {
+        this.pictureService = pictureService;
         this.securityUtils = securityUtils;
     }
 
-    @PostMapping("/remove_unused.json")
-    @Operation(summary = "Remove unused pictures")
-    public ApiResponse<RemoveResult> removeUnused() {
-        Long userId = securityUtils.requireCurrentUser().getId();
-        long total = pictureRepository.countByUserId(userId);
-        // Stub: just return count, actual cleanup would check transaction references
-        pictureRepository.deleteByUserId(userId);
-        return ApiResponse.success(new RemoveResult(total, total));
+    @PostMapping(value = "/upload.json", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload picture to transaction")
+    public ApiResponse<TransactionPictureDto> upload(
+            @RequestParam("transaction_id") Long transactionId,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        byte[] data = file.getBytes();
+        String mimeType = file.getContentType();
+        TransactionPictureDto result = pictureService.uploadPicture(transactionId, file.getOriginalFilename(), data, mimeType);
+        return ApiResponse.success(result);
     }
 
-    public record RemoveResult(long totalPictures, long removedPictures) {}
+    @GetMapping("/list.json")
+    @Operation(summary = "List pictures for a transaction")
+    public ApiResponse<List<TransactionPictureDto>> list(@RequestParam("transaction_id") Long transactionId) {
+        return ApiResponse.success(pictureService.listByTransaction(transactionId));
+    }
+
+    @PostMapping("/remove.json")
+    @Operation(summary = "Delete a picture")
+    public ApiResponse<Void> remove(@RequestParam("picture_id") Long pictureId) {
+        pictureService.deletePicture(pictureId);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/remove_unused.json")
+    @Operation(summary = "Remove unused pictures (no transaction reference)")
+    public ApiResponse<PictureCleanupResult> removeUnused() {
+        long count = pictureService.cleanupUnused();
+        return ApiResponse.success(new PictureCleanupResult(count));
+    }
+
+    public record PictureCleanupResult(long removedCount) {}
 }

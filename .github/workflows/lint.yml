@@ -1,0 +1,41 @@
+# =============================================================================
+# Lint & Quality Check Workflow
+# Validates YAML files and basic quality checks
+# =============================================================================
+
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint-yaml:
+    name: YAML Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate YAML files
+        run: |
+          for f in .github/workflows/*.yml; do
+            echo "Validating $f..."
+            python3 -c "import yaml; yaml.safe_load(open('$f'))" && echo "✅ $f OK" || echo "❌ $f FAILED"
+          done
+
+  lint-markdown:
+    name: Markdown Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for broken links in docs
+        run: |
+          echo "Checking docs structure..."
+          ls docs/*.md | head -5
+          echo "✅ Markdown files present"

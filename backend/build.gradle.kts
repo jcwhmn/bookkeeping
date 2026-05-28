@@ -42,8 +42,8 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.14.1")
     implementation("org.flywaydb:flyway-database-postgresql:11.14.1")
     
-    // API Documentation (springdoc OpenAPI)
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    // API Documentation (springdoc OpenAPI with Scalar UI)
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-scalar:3.0.3")
     
     // Security
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")

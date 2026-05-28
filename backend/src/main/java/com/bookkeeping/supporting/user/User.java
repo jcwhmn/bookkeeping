@@ -59,6 +59,24 @@ public class User extends BaseEntity {
     @Column(name = "onboarding_completed")
     private Boolean onboardingCompleted = false;
 
+    @Column(name = "totp_secret", length = 64)
+    private String totpSecret;
+    @Column(name = "totp_enabled")
+    private Boolean totpEnabled = false;
+    @Column(name = "totp_created_at")
+    private Long totpCreatedAt;
+    @Column(name = "recovery_codes", columnDefinition = "TEXT")
+    private String recoveryCodes;
+    
+    // ============ 2FA Setters ============
+    public void setTotpSecret(String totpSecret) { this.totpSecret = totpSecret; }
+    public void setTotpEnabled(Boolean totpEnabled) { this.totpEnabled = totpEnabled; }
+    public void setTotpCreatedAt(Long totpCreatedAt) { this.totpCreatedAt = totpCreatedAt; }
+    public void setRecoveryCodes(String recoveryCodes) { this.recoveryCodes = recoveryCodes; }
+    
+    // ============ User Setters ============
+    public void setOnboardingCompleted(Boolean onboardingCompleted) { this.onboardingCompleted = onboardingCompleted; }
+    
     public boolean isActive() {
         return !Boolean.TRUE.equals(disabled);
     }

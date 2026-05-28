@@ -41,7 +41,16 @@ public enum ResultCode {
     // Transaction errors (6xxx)
     TRANSACTION_NOT_FOUND(6001, "Transaction not found"),
     TRANSACTION_INSUFFICIENT_BALANCE(6002, "Insufficient balance"),
-    TRANSACTION_INVALID(6003, "Invalid transaction");
+    TRANSACTION_INVALID(6003, "Invalid transaction"),
+    
+    // 2FA errors (7xxx)
+    INVALID_TOTP_PASSCODE(7001, "Invalid TOTP passcode"),
+    INVALID_RECOVERY_CODE(7002, "Invalid recovery code"),
+    TWO_FACTOR_NOT_ENABLED(7003, "Two-factor authentication is not enabled"),
+    
+    // Password errors (8xxx)
+    PASSWORD_INCORRECT(8001, "Password is incorrect"),
+    PASSWORD_TOO_SHORT(8002, "Password must be at least 6 characters");
     
     private final int code;
     private final String message;

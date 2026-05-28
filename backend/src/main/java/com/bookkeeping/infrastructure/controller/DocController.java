@@ -6,15 +6,19 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.http.MediaType;
 
 /**
- * Serve Swagger UI at /doc.html endpoint.
- * This provides a more user-friendly URL for API documentation.
+ * Redirect API documentation to Scalar UI.
+ * Access at /doc.html → redirects to /scalar
  */
 @Controller
 public class DocController {
 
     @GetMapping(value = "/doc.html", produces = MediaType.TEXT_HTML_VALUE)
-    public RedirectView swaggerUi() {
-        // Redirect to the static HTML page which loads Swagger UI
-        return new RedirectView("/doc/index.html", true);
+    public RedirectView docRedirect() {
+        return new RedirectView("/scalar", true);
+    }
+
+    @GetMapping(value = "/swagger-ui.html", produces = MediaType.TEXT_HTML_VALUE)
+    public RedirectView swaggerUiRedirect() {
+        return new RedirectView("/scalar", true);
     }
 }

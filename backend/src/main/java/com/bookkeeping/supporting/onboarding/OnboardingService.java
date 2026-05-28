@@ -78,8 +78,8 @@ public class OnboardingService {
     public void markOnboardingComplete() {
         Long userId = securityUtils.requireCurrentUser().getId();
         User user = userRepository.findById(userId).orElseThrow();
-        User updated = user.toBuilder().onboardingCompleted(true).build().withId(user.getId());
-        userRepository.save(updated);
+        user.setOnboardingCompleted(true);
+        userRepository.save(user);
     }
 
     /**
@@ -99,8 +99,8 @@ public class OnboardingService {
 
         // Mark onboarding complete after creating defaults
         User user = userRepository.findById(userId).orElseThrow();
-        User updated = user.toBuilder().onboardingCompleted(true).build().withId(user.getId());
-        userRepository.save(updated);
+        user.setOnboardingCompleted(true);
+        userRepository.save(user);
 
         return new OnboardingDtos.CreateDefaultsResponse(createdIds.size(), createdIds);
     }

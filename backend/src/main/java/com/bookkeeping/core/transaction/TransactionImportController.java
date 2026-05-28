@@ -1,8 +1,6 @@
 package com.bookkeeping.core.transaction;
 
 import com.bookkeeping.common.ApiResponse;
-import com.bookkeeping.core.transaction.TransactionPictureRepository;
-import com.bookkeeping.supporting.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -10,64 +8,49 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/transactions")
-@Tag(name = "Transactions", description = "Transaction import APIs")
+@RequestMapping("/api/v1/transactions/import")
+@Tag(name = "Transaction Import", description = "Import transactions from CSV/OFX")
 public class TransactionImportController {
 
-    private final TransactionService transactionService;
-    private final SecurityUtils securityUtils;
-    private final TransactionPictureRepository pictureRepository;
+    private final TransactionImportService importService;
 
-    public TransactionImportController(TransactionService transactionService,
-                                        SecurityUtils securityUtils,
-                                        TransactionPictureRepository pictureRepository) {
-        this.transactionService = transactionService;
-        this.securityUtils = securityUtils;
-        this.pictureRepository = pictureRepository;
+    public TransactionImportController(TransactionImportService importService) {
+        this.importService = importService;
+    }
+
+    @PostMapping("/parse_custom.json")
+    @Operation(summary = "Parse CSV/TSV with custom column mapping")
+    public ApiResponse<TransactionImportService.ParseResult> parseCustom(
+            @RequestBody TransactionImportService.ParseRequest request) {
+        return ApiResponse.success(importService.parseCustom(request.rawData(), request));
+    }
+
+    @PostMapping("/parse_standard.json")
+    @Operation(summary = "Parse standard format (OFX/QFX/QIF) - stub")
+    public ApiResponse<TransactionImportService.ParseResult> parseStandard(
+            @RequestBody ParseStandardRequest request) {
+        // Stub: Return empty result
+        return ApiResponse.success(new TransactionImportService.ParseResult(
+                java.util.List.of(), "Standard format parsing not implemented yet", 0));
     }
 
     @PostMapping("/import.json")
-    @Operation(summary = "Import transactions (stub)")
-    public ApiResponse<Map<String, Object>> importTransactions(
-            @RequestBody TransactionImportRequest request) {
-        securityUtils.requireCurrentUser();
-        // Stub: return import job ID for async processing
-        String jobId = "import_" + System.currentTimeMillis();
-        return ApiResponse.success(Map.of(
-                "jobId", jobId,
-                "status", "pending",
-                "totalRows", request.transactions() != null ? request.transactions().size() : 0
-        ));
+    @Operation(summary = "Execute import from parsed session")
+    public ApiResponse<TransactionImportService.ImportResult> executeImport(
+            @RequestBody ExecuteImportRequest request) {
+        return ApiResponse.success(importService.executeImport(request.sessionId(), request.rowCategoryMap()));
     }
 
-    @GetMapping("/import/process.json")
+    @GetMapping("/process.json")
     @Operation(summary = "Check import process status")
-    public ApiResponse<ImportProcessStatus> checkImportStatus(
-            @RequestParam String client_session_id) {
-        // Stub: always return completed
-        return ApiResponse.success(new ImportProcessStatus(
-                client_session_id, 100, 0, "completed", 0));
+    public ApiResponse<TransactionImportService.ImportProcessResult> checkProcess(
+            @RequestParam("session_id") String sessionId) {
+        return ApiResponse.success(importService.checkProcess(sessionId));
     }
 
-    public record TransactionImportRequest(
-            String clientSessionId,
-            String format,
-            java.util.List<TransactionImportItem> transactions
-    ) {}
-    public record TransactionImportItem(
-            Integer transactionType,
-            Long accountId,
-            Long categoryId,
-            Long amount,
-            String description,
-            Long transactionTime,
-            java.util.List<String> tags
-    ) {}
-    public record ImportProcessStatus(
-            String clientSessionId,
-            Integer progress,
-            Integer totalRows,
-            String status,
-            Integer errors
-    ) {}
+    // === Request DTOs ===
+
+    public record ParseStandardRequest(String format, String rawData, Long accountId) {}
+
+    public record ExecuteImportRequest(String sessionId, Map<Integer, Long> rowCategoryMap) {}
 }

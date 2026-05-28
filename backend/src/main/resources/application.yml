@@ -24,8 +24,13 @@ jwt:
 springdoc:
   enable: true
   swagger-ui:
+    enabled: false
+  scalar:
     enabled: true
-    path: /swagger-ui.html  # Keep default path for springdoc config
+    path: /scalar
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
   openapi:
     title: ezBookkeeping API
     description: Personal bookkeeping application REST API

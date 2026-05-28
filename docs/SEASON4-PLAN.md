@@ -1,4 +1,23 @@
-# Season 4 Planning — Complete ✅
+# Season 4 Planning — ✅ COMPLETED
+
+**Archived**: 2026-05-28 — All planned work completed
+
+**Reference**: `openapi.yaml` (112 endpoints)
+**Final coverage**: ~99/112 endpoints (~88%)
+
+## Final Status
+
+| Sprint | Work | Status |
+|--------|------|--------|
+| Sprint 1 | Data Export + Clear + Amounts | ✅ |
+| Sprint 2 | Token Management | ✅ |
+| Sprint 3 | Import/Parse + Pictures stub | ✅ |
+| Sprint 4 | Security Tier (OAuth, Email, Password) | ✅ |
+| Bonus | LLM Receipt Recognition stub | ✅ |
+
+## Remaining ~13 endpoints (lower priority)
+
+See [SEASON5-PLAN.md](SEASON5-PLAN.md) for continuation.
 
 **Reference**: `openapi.yaml` (112 endpoints)
 

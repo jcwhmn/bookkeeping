@@ -18,9 +18,31 @@ public class TransactionPicture extends BaseEntity {
     @Column(name = "transaction_id", nullable = false)
     private Long transactionId;
 
-    @Column(name = "picture_url", length = 500)
-    private String pictureUrl;
+    @Column(name = "file_name", length = 255, nullable = false)
+    private String fileName;
 
-    @Column(name = "thumbnail_url", length = 500)
-    private String thumbnailUrl;
+    @Column(name = "file_path", length = 500, nullable = false)
+    private String filePath;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "mime_type", length = 100)
+    private String mimeType;
+
+    @Column(name = "deleted", nullable = false)
+    @Builder.Default
+    private Boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private Long deletedAt;
+
+    // === Setters for soft delete (only way to update in this project) ===
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public void setDeletedAt(Long deletedAt) {
+        this.deletedAt = deletedAt;
+    }
 }
