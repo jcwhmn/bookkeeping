@@ -104,6 +104,9 @@ dependencies {
     "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-web")
     "integrationTestImplementation"("org.springframework.boot:spring-boot-test")
     "integrationTestImplementation"("org.springframework.security:spring-security-test")
+    // Apache HttpClient - required for PATCH method support in RestTemplate
+    // JDK's HttpURLConnection doesn't support PATCH, throws ProtocolException
+    "integrationTestImplementation"("org.apache.httpcomponents.client5:httpclient5")
     "integrationTestRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 

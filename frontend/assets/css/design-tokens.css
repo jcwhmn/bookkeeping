@@ -1,0 +1,130 @@
+/**
+ * Design Tokens - Stripe-inspired for Bookkeeping
+ * 
+ * These CSS custom properties provide a consistent design system.
+ * Use these instead of hardcoded colors for maintainability.
+ * 
+ * @see design.md for design decisions and rationale
+ */
+
+:root {
+  /* ============================================
+   * COLORS - Professional Fintech Palette
+   * ============================================ */
+
+  /* Primary - Indigo */
+  --stripe-primary: #533afd;
+  --stripe-primary-deep: #4434d4;
+  --stripe-primary-press: #2e2b8c;
+  --stripe-primary-soft: #665efd;
+  --stripe-primary-bg-subdued: #b9b9f9;
+
+  /* Canvas & Backgrounds */
+  --stripe-canvas: #ffffff;
+  --stripe-canvas-soft: #f6f9fc;
+  --stripe-canvas-cream: #f5e9d4;
+
+  /* Text */
+  --stripe-ink: #0d253d;
+  --stripe-ink-secondary: #273951;
+  --stripe-ink-mute: #64748d;
+
+  /* On Color (text on colored backgrounds) */
+  --stripe-on-primary: #ffffff;
+  --stripe-on-canvas: #0d253d;
+
+  /* Financial Colors */
+  --stripe-positive: #1aae39;
+  --stripe-positive-soft: #d4edda;
+  --stripe-negative: #ea2261;
+  --stripe-negative-soft: #fce4ec;
+  --stripe-lemon: #9b6829;
+
+  /* Borders & Dividers */
+  --stripe-hairline: #e3e8ee;
+  --stripe-hairline-input: #a8c3de;
+
+  /* Accent Gradients */
+  --stripe-gradient-start: #667eea;
+  --stripe-gradient-end: #764ba2;
+  --stripe-gradient: linear-gradient(135deg, #667eea, #764ba2);
+
+  /* ============================================
+   * SPACING - 8px Grid System
+   * ============================================ */
+  --stripe-space-xxs: 2px;
+  --stripe-space-xs: 4px;
+  --stripe-space-sm: 8px;
+  --stripe-space-md: 12px;
+  --stripe-space-lg: 16px;
+  --stripe-space-xl: 24px;
+  --stripe-space-xxl: 32px;
+  --stripe-space-huge: 64px;
+
+  /* ============================================
+   * BORDER RADIUS
+   * ============================================ */
+  --stripe-radius-xs: 4px;
+  --stripe-radius-sm: 6px;
+  --stripe-radius-md: 8px;
+  --stripe-radius-lg: 12px;
+  --stripe-radius-xl: 16px;
+  --stripe-radius-pill: 9999px;
+
+  /* ============================================
+   * SHADOWS
+   * ============================================ */
+  --stripe-shadow-sm: 0 1px 3px rgba(0, 55, 112, 0.08);
+  --stripe-shadow-md: 0 4px 6px rgba(0, 55, 112, 0.1);
+  --stripe-shadow-lg: 0 10px 15px rgba(0, 55, 112, 0.1);
+  --stripe-shadow-focus: 0 0 0 2px rgba(83, 58, 253, 0.2);
+
+  /* ============================================
+   * TYPOGRAPHY
+   * ============================================ */
+  --stripe-font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  
+  /* Font weights */
+  --stripe-font-light: 300;
+  --stripe-font-normal: 400;
+  --stripe-font-medium: 500;
+  --stripe-font-semibold: 600;
+  --stripe-font-bold: 700;
+
+  /* Font sizes */
+  --stripe-text-display-xl: 48px;
+  --stripe-text-display-lg: 32px;
+  --stripe-text-heading-lg: 22px;
+  --stripe-text-body-lg: 16px;
+  --stripe-text-body-md: 15px;
+  --stripe-text-body-tabular: 14px;
+  --stripe-text-button: 16px;
+  --stripe-text-caption: 13px;
+
+  /* Line heights */
+  --stripe-leading-display-xl: 1.15;
+  --stripe-leading-display-lg: 1.1;
+  --stripe-leading-heading-lg: 1.1;
+  --stripe-leading-body: 1.4;
+
+  /* Letter spacing */
+  --stripe-ls-display-xl: -0.96px;
+  --stripe-ls-display-lg: -0.64px;
+  --stripe-ls-heading-lg: -0.22px;
+  --stripe-ls-body-tabular: -0.42px;
+  --stripe-ls-caption: -0.39px;
+
+  /* ============================================
+   * TRANSITIONS
+   * ============================================ */
+  --stripe-transition-fast: 150ms ease;
+  --stripe-transition-base: 200ms ease;
+  --stripe-transition-slow: 300ms ease;
+}
+
+/* Dark mode tokens (future phase) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode will override these */
+  }
+}

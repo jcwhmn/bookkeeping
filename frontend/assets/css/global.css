@@ -1,0 +1,413 @@
+/**
+ * Global Styles - Bookkeeping Frontend
+ * 
+ * Applies Stripe-inspired global styling:
+ * - Tabular figures for money/numbers
+ * - Global font configuration
+ * - Common utility classes
+ * - Component overrides
+ */
+
+/* ============================================
+ * BASE STYLES
+ * ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--stripe-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--stripe-font-family);
+  color: var(--stripe-ink);
+  background-color: var(--stripe-canvas);
+}
+
+/* ============================================
+ * TYPOGRAPHY UTILITIES
+ * ============================================ */
+
+/* Display text - large headlines */
+.stripe-display-xl {
+  font-size: var(--stripe-text-display-xl);
+  font-weight: var(--stripe-font-light);
+  line-height: var(--stripe-leading-display-xl);
+  letter-spacing: var(--stripe-ls-display-xl);
+}
+
+.stripe-display-lg {
+  font-size: var(--stripe-text-display-lg);
+  font-weight: var(--stripe-font-light);
+  line-height: var(--stripe-leading-display-lg);
+  letter-spacing: var(--stripe-ls-display-lg);
+}
+
+/* Headings */
+.stripe-heading-lg {
+  font-size: var(--stripe-text-heading-lg);
+  font-weight: var(--stripe-font-light);
+  line-height: var(--stripe-leading-heading-lg);
+  letter-spacing: var(--stripe-ls-heading-lg);
+}
+
+/* Body text */
+.stripe-body-lg {
+  font-size: var(--stripe-text-body-lg);
+  font-weight: var(--stripe-font-normal);
+  line-height: var(--stripe-leading-body);
+}
+
+.stripe-body-md {
+  font-size: var(--stripe-text-body-md);
+  font-weight: var(--stripe-font-normal);
+  line-height: var(--stripe-leading-body);
+}
+
+/* Caption/label text */
+.stripe-caption {
+  font-size: var(--stripe-text-caption);
+  font-weight: var(--stripe-font-normal);
+  line-height: var(--stripe-leading-body);
+  letter-spacing: var(--stripe-ls-caption);
+  color: var(--stripe-ink-mute);
+}
+
+/* ============================================
+ * MONEY / FINANCIAL DISPLAY (CRITICAL)
+ * ============================================ */
+
+/**
+ * Tabular figures are critical for financial applications.
+ * Numbers must align perfectly in columns regardless of digit count.
+ * 
+ * Usage: Apply .stripe-money to any monetary amount display
+ */
+.stripe-money,
+.stripe-amount,
+.stripe-balance,
+.money,
+.amount,
+.balance {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--stripe-ls-body-tabular);
+}
+
+/* Money display sizes */
+.stripe-money-sm {
+  font-size: var(--stripe-text-body-tabular);
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+.stripe-money-md {
+  font-size: 18px;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+.stripe-money-lg {
+  font-size: 24px;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--stripe-font-medium);
+}
+
+.stripe-money-xl {
+  font-size: 32px;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--stripe-font-semibold);
+}
+
+/* Money colors */
+.stripe-money-positive,
+.stripe-money-positive .stripe-money {
+  color: var(--stripe-positive);
+}
+
+.stripe-money-negative,
+.stripe-money-negative .stripe-money {
+  color: var(--stripe-negative);
+}
+
+/* Sign display */
+.stripe-money-sign-positive::before {
+  content: '+';
+}
+
+.stripe-money-sign-negative::before {
+  content: '-';
+}
+
+/* ============================================
+ * CARD STYLES
+ * ============================================ */
+
+/**
+ * Stripe-style cards use hairline borders instead of shadows.
+ * This creates a clean, professional appearance.
+ */
+.stripe-card {
+  background: var(--stripe-canvas);
+  border: 1px solid var(--stripe-hairline);
+  border-radius: var(--stripe-radius-lg);
+  box-shadow: var(--stripe-shadow-sm);
+  padding: var(--stripe-space-xl);
+}
+
+.stripe-card-compact {
+  background: var(--stripe-canvas);
+  border: 1px solid var(--stripe-hairline);
+  border-radius: var(--stripe-radius-md);
+  box-shadow: var(--stripe-shadow-sm);
+  padding: var(--stripe-space-lg);
+}
+
+/* ============================================
+ * TABLE STYLES
+ * ============================================ */
+
+/**
+ * Transaction tables use hairline row separators.
+ * Clean, scannable, professional.
+ */
+.stripe-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stripe-table th {
+  font-size: var(--stripe-text-caption);
+  font-weight: var(--stripe-font-medium);
+  color: var(--stripe-ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--stripe-space-md) var(--stripe-space-lg);
+  border-bottom: 1px solid var(--stripe-hairline);
+  text-align: left;
+}
+
+.stripe-table td {
+  font-size: var(--stripe-text-body-md);
+  padding: var(--stripe-space-md) var(--stripe-space-lg);
+  border-bottom: 1px solid var(--stripe-hairline);
+}
+
+.stripe-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Right-aligned amount column */
+.stripe-table .amount-col,
+.stripe-table td.amount {
+  text-align: right;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+ * BUTTON STYLES
+ * ============================================ */
+
+/**
+ * Primary button - filled indigo pill
+ * (Vuetify default handles most cases via plugin config)
+ */
+.stripe-btn-primary {
+  background: var(--stripe-primary);
+  color: var(--stripe-on-primary);
+  font-size: var(--stripe-text-button);
+  font-weight: var(--stripe-font-normal);
+  padding: var(--stripe-space-sm) var(--stripe-space-lg);
+  border-radius: var(--stripe-radius-pill);
+  border: none;
+  cursor: pointer;
+  transition: background var(--stripe-transition-fast);
+}
+
+.stripe-btn-primary:hover {
+  background: var(--stripe-primary-deep);
+}
+
+.stripe-btn-primary:active {
+  background: var(--stripe-primary-press);
+}
+
+/**
+ * Secondary button - outlined pill
+ */
+.stripe-btn-secondary {
+  background: var(--stripe-canvas);
+  color: var(--stripe-primary);
+  font-size: var(--stripe-text-button);
+  font-weight: var(--stripe-font-normal);
+  padding: var(--stripe-space-sm) var(--stripe-space-lg);
+  border-radius: var(--stripe-radius-pill);
+  border: 1px solid var(--stripe-primary);
+  cursor: pointer;
+  transition: all var(--stripe-transition-fast);
+}
+
+.stripe-btn-secondary:hover {
+  background: var(--stripe-primary-bg-subdued);
+}
+
+/* ============================================
+ * INPUT STYLES
+ * ============================================ */
+
+/**
+ * Text input focus state
+ * (Vuetify handles most via theme defaults)
+ */
+.stripe-input:focus {
+  border-color: var(--stripe-primary);
+  box-shadow: var(--stripe-shadow-focus);
+  outline: none;
+}
+
+/* ============================================
+ * TAG / BADGE STYLES
+ * ============================================ */
+
+/**
+ * Category tag - soft indigo pill
+ */
+.stripe-tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--stripe-primary-bg-subdued);
+  color: var(--stripe-primary-deep);
+  font-size: 10px;
+  font-weight: var(--stripe-font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.1px;
+  padding: var(--stripe-space-xs) var(--stripe-space-sm);
+  border-radius: var(--stripe-radius-pill);
+}
+
+/* Success tag */
+.stripe-tag-success {
+  background: var(--stripe-positive-soft);
+  color: var(--stripe-positive);
+}
+
+/* Error tag */
+.stripe-tag-error {
+  background: var(--stripe-negative-soft);
+  color: var(--stripe-negative);
+}
+
+/* ============================================
+ * ICON STYLES
+ * ============================================ */
+
+/**
+ * Gradient icon circle (Revolut style)
+ */
+.stripe-icon-gradient {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--stripe-gradient);
+  color: white;
+  font-size: 20px;
+}
+
+.stripe-icon-gradient-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.stripe-icon-gradient-lg {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+}
+
+/* ============================================
+ * NAVIGATION
+ * ============================================ */
+
+/**
+ * Active nav item - indigo pill background
+ */
+.stripe-nav-item-active {
+  background: var(--stripe-primary);
+  color: var(--stripe-on-primary);
+}
+
+/* ============================================
+ * UTILITY CLASSES
+ * ============================================ */
+
+.stripe-text-muted {
+  color: var(--stripe-ink-mute);
+}
+
+.stripe-text-right {
+  text-align: right;
+}
+
+.stripe-border-hairline {
+  border: 1px solid var(--stripe-hairline);
+}
+
+.stripe-border-bottom-hairline {
+  border-bottom: 1px solid var(--stripe-hairline);
+}
+
+/* ============================================
+ * VUETIFY OVERRIDES
+ * ============================================ */
+
+/* Override Vuetify focus states */
+.v-application .v-field--focused {
+  box-shadow: var(--stripe-shadow-focus);
+}
+
+/* Override card hover (optional) */
+.v-card:hover {
+  box-shadow: var(--stripe-shadow-md);
+}
+
+/* Override data table headers */
+.v-data-table th {
+  font-size: var(--stripe-text-caption) !important;
+  font-weight: var(--stripe-font-medium) !important;
+  color: var(--stripe-ink-mute) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* ============================================
+ * SCROLLBAR STYLING (Webkit)
+ * ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--stripe-canvas-soft);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--stripe-hairline);
+  border-radius: var(--stripe-radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--stripe-ink-mute);
+}

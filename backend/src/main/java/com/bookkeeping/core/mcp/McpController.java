@@ -179,7 +179,7 @@ public class McpController {
         return categoryService.getCurrentUserCategories().stream().map(dto -> Map.<String, Object>of(
                 "id", dto.id(),
                 "name", dto.name(),
-                "type", dto.categoryType().name()
+                "type", dto.categoryType()
         )).toList();
     }
 

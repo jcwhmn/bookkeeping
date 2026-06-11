@@ -37,6 +37,7 @@ public enum ResultCode {
     // Category errors (5xxx)
     CATEGORY_NOT_FOUND(5001, "Category not found"),
     CATEGORY_ALREADY_EXISTS(5002, "Category already exists"),
+    CATEGORY_TYPE_INVALID(5003, "Invalid category type"),
     
     // Transaction errors (6xxx)
     TRANSACTION_NOT_FOUND(6001, "Transaction not found"),

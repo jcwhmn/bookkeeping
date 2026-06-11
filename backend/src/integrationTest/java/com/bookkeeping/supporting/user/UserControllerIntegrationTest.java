@@ -1,194 +1,318 @@
 package com.bookkeeping.supporting.user;
 
 import com.bookkeeping.BaseIntegrationTest;
-import com.bookkeeping.common.ResultCode;
-import com.bookkeeping.exception.BusinessException;
+import com.bookkeeping.core.account.Account;
+import com.bookkeeping.core.account.AccountRepository;
+import com.bookkeeping.supporting.auth.AuthService;
+import com.bookkeeping.supporting.auth.LoginRequest;
+import com.bookkeeping.supporting.auth.LoginResponse;
+import com.bookkeeping.supporting.auth.RegisterRequest;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for UserService and UserRepository.
- * Tests against real PostgreSQL database.
+ * Integration tests for UserController.
+ * Tests HTTP endpoints using real HTTP calls via RestTemplate.
  */
 class UserControllerIntegrationTest extends BaseIntegrationTest {
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
-    private UserService userService;
+    private AccountRepository accountRepository;
 
-    private User createTestUser(String username) {
-        String salt = "salt123";
-        String hashedPw = hashPassword("password123", salt);
-        User user = User.builder()
-                .username(username)
-                .email(username + "@example.com")
-                .nickname("Test User")
-                .password(hashedPw)
-                .salt(salt)
-                .defaultCurrency("USD")
-                .language("en-US")
-                .emailVerified(true)
-                .disabled(false)
-                .build();
-        return userRepository.save(user);
+    @Autowired
+    private AuthService authService;
+
+    private String authToken;
+
+    @BeforeEach
+    void setUp() {
+        // baseUrl is provided by BaseIntegrationTest
     }
 
-    private String hashPassword(String password, String salt) {
-        try {
-            String salted = salt + password;
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(salted.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : digest) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
+    private String loginAndGetToken(String username, String password) {
+        String url = baseUrl() + "/api/v1/auth/login";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        Map<String, String> body = new HashMap<>();
+        body.put("username", username);
+        body.put("password", password);
+        
+        HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+        
+        if (response.getStatusCode() == HttpStatus.OK) {
+            try {
+                JsonNode json = objectMapper.readTree(response.getBody());
+                return json.path("result").path("token").asText();
+            } catch (Exception e) {
+                fail("Failed to parse login response: " + e.getMessage());
             }
-            return hexString.toString();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        }
+        fail("Login failed for user: " + username);
+        return null;
+    }
+
+    private String createTestUserAndLogin(String prefix) {
+        String username = prefix + "_" + (System.currentTimeMillis() % 100000);
+        String password = "password123";
+        
+        authService.register(new RegisterRequest(username, username + "@example.com", password));
+        
+        return loginAndGetToken(username, password);
+    }
+
+    // ========================================================================
+    // Profile GET Tests
+    // ========================================================================
+
+    @Test
+    void getProfile_withValidToken_returnsUserProfile() {
+        authToken = createTestUserAndLogin("getprofile");
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(authToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl() + "/api/v1/users/profile/get.json",
+                HttpMethod.GET,
+                request,
+                String.class
+        );
+        
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("\"success\":true"));
+        assertTrue(response.getBody().contains("username"));
+    }
+
+    @Test
+    void getProfile_withoutToken_returnsUnauthorized() {
+        HttpHeaders headers = new HttpHeaders();
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        
+        try {
+            restTemplate.exchange(
+                    baseUrl() + "/api/v1/users/profile/get.json",
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            fail("Expected 401 Unauthorized");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
         }
     }
 
     @Test
-    void findById_existingUser_returnsUser() {
-        User user = createTestUser("findbyid_" + System.currentTimeMillis());
+    void getProfile_withInvalidToken_returnsUnauthorized() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth("invalid.token.here");
+        HttpEntity<String> request = new HttpEntity<>(headers);
         
-        var result = userService.findById(user.getId());
+        try {
+            restTemplate.exchange(
+                    baseUrl() + "/api/v1/users/profile/get.json",
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            fail("Expected 401 Unauthorized");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
+        }
+    }
+
+    // ========================================================================
+    // Profile UPDATE Tests
+    // ========================================================================
+
+    @Test
+    void updateProfile_withValidData_updatesAndReturnsProfile() {
+        authToken = createTestUserAndLogin("updateprofile");
         
-        assertTrue(result.isPresent());
-        assertEquals(user.getUsername(), result.get().getUsername());
-        assertEquals(user.getEmail(), result.get().getEmail());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(authToken);
+        
+        Map<String, Object> body = new HashMap<>();
+        body.put("nickname", "UpdatedNickname_" + (System.currentTimeMillis() % 100000));
+        body.put("defaultCurrency", "EUR");
+        body.put("language", "de-DE");
+        
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl() + "/api/v1/users/profile/update.json",
+                HttpMethod.POST,
+                request,
+                String.class
+        );
+        
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("\"success\":true"));
+        assertTrue(response.getBody().contains("EUR"));
     }
 
     @Test
-    void findById_nonExistingUser_returnsEmpty() {
-        var user = userService.findById(99999L);
+    void updateProfile_withoutAuth_returnsUnauthorized() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
         
-        assertFalse(user.isPresent());
+        Map<String, Object> body = new HashMap<>();
+        body.put("nickname", "NewNickname");
+        
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        
+        try {
+            restTemplate.exchange(
+                    baseUrl() + "/api/v1/users/profile/update.json",
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+            fail("Expected 401 Unauthorized");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
+        }
+    }
+
+    // ========================================================================
+    // Avatar Tests
+    // ========================================================================
+
+    @Test
+    void removeAvatar_withAuth_removesAvatar() {
+        authToken = createTestUserAndLogin("removeavatar");
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(authToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl() + "/api/v1/users/avatar/remove.json",
+                HttpMethod.POST,
+                request,
+                String.class
+        );
+        
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("\"success\":true"));
     }
 
     @Test
-    void getById_nonExistingUser_throwsBusinessException() {
-        BusinessException ex = assertThrows(BusinessException.class, () -> {
-            userService.getById(99999L);
-        });
+    void removeAvatar_withoutAuth_returnsUnauthorized() {
+        HttpHeaders headers = new HttpHeaders();
+        HttpEntity<String> request = new HttpEntity<>(headers);
         
-        assertEquals(ResultCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
+        try {
+            restTemplate.exchange(
+                    baseUrl() + "/api/v1/users/avatar/remove.json",
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+            fail("Expected 401 Unauthorized");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
+        }
+    }
+
+    // ========================================================================
+    // Data Statistics Tests
+    // ========================================================================
+
+    @Test
+    void getDataStatistics_withAuth_returnsStatistics() {
+        authToken = createTestUserAndLogin("datastats");
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(authToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl() + "/api/v1/users/data/statistics.json",
+                HttpMethod.GET,
+                request,
+                String.class
+        );
+        
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("\"success\":true"));
     }
 
     @Test
-    void findByUsername_existingUser_returnsUser() {
-        String username = "findbyun_" + System.currentTimeMillis();
-        createTestUser(username);
+    void getDataStatistics_withoutAuth_returnsUnauthorized() {
+        HttpHeaders headers = new HttpHeaders();
+        HttpEntity<String> request = new HttpEntity<>(headers);
         
-        var user = userService.findByUsername(username);
+        try {
+            restTemplate.exchange(
+                    baseUrl() + "/api/v1/users/data/statistics.json",
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            fail("Expected 401 Unauthorized");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
+        }
+    }
+
+    // ========================================================================
+    // Cloud Settings Tests
+    // ========================================================================
+
+    @Test
+    void getCloudSettings_withAuth_returnsSettings() {
+        authToken = createTestUserAndLogin("cloudsets");
         
-        assertTrue(user.isPresent());
-        assertEquals(username + "@example.com", user.get().getEmail());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(authToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl() + "/api/v1/users/settings/cloud/get.json",
+                HttpMethod.GET,
+                request,
+                String.class
+        );
+        
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("\"success\":true"));
     }
 
     @Test
-    void getByUsername_nonExistingUser_throwsBusinessException() {
-        BusinessException ex = assertThrows(BusinessException.class, () -> {
-            userService.getByUsername("nonexistent_" + System.currentTimeMillis());
-        });
+    void getCloudSettings_withoutAuth_returnsUnauthorized() {
+        HttpHeaders headers = new HttpHeaders();
+        HttpEntity<String> request = new HttpEntity<>(headers);
         
-        assertEquals(ResultCode.USER_NOT_FOUND.getCode(), ex.getErrorCode());
-    }
-
-    @Test
-    void updateProfile_withNickname_updatesNickname() {
-        User user = createTestUser("updatenick_" + System.currentTimeMillis());
-        var request = new UpdateUserRequest("New Nickname", null, null, null, null, 1, 1, 1, "YYYY-MM-DD");
-        
-        var result = userService.updateProfile(user.getId(), request);
-        
-        assertEquals("New Nickname", result.nickname());
-        assertEquals(user.getUsername(), result.username());
-    }
-
-    @Test
-    void updateProfile_withNewCurrency_updatesCurrency() {
-        User user = createTestUser("updatecurr_" + System.currentTimeMillis());
-        var request = new UpdateUserRequest(null, "EUR", null, null, null, 1, 1, 1, "YYYY-MM-DD");
-        
-        var result = userService.updateProfile(user.getId(), request);
-        
-        assertEquals("EUR", result.defaultCurrency());
-    }
-
-    @Test
-    void updateProfile_withNewLanguage_updatesLanguage() {
-        User user = createTestUser("updatelang_" + System.currentTimeMillis());
-        var request = new UpdateUserRequest(null, null, "zh-CN", null, null, 1, 1, 1, "YYYY-MM-DD");
-        
-        var result = userService.updateProfile(user.getId(), request);
-        
-        assertEquals("zh-CN", result.language());
-    }
-
-    @Test
-    void existsByUsername_existingUser_returnsTrue() {
-        String username = "existsun_" + System.currentTimeMillis();
-        createTestUser(username);
-        
-        assertTrue(userService.existsByUsername(username));
-    }
-
-    @Test
-    void existsByUsername_nonExistingUser_returnsFalse() {
-        assertFalse(userService.existsByUsername("nonexistent_" + System.currentTimeMillis()));
-    }
-
-    @Test
-    void existsByEmail_existingUser_returnsTrue() {
-        String username = "existsemail_" + System.currentTimeMillis();
-        User user = createTestUser(username);
-        
-        assertTrue(userService.existsByEmail(user.getEmail()));
-    }
-
-    @Test
-    void save_newUser_persistsAndRetrieves() {
-        String username = "newuser_" + System.currentTimeMillis();
-        User newUser = User.builder()
-                .username(username)
-                .email(username + "@example.com")
-                .nickname("New User")
-                .password("hash")
-                .salt("salt")
-                .emailVerified(true)
-                .build();
-        
-        User saved = userRepository.save(newUser);
-        assertNotNull(saved.getId());
-        
-        User retrieved = userRepository.findById(saved.getId()).orElseThrow();
-        assertEquals(username, retrieved.getUsername());
-    }
-
-    @Test
-    void deleteUser_userRemovedFromDatabase() {
-        User user = createTestUser("deleteuser_" + System.currentTimeMillis());
-        Long userId = user.getId();
-        
-        userRepository.deleteById(userId);
-        
-        assertFalse(userRepository.findById(userId).isPresent());
-    }
-
-    @Test
-    void count_afterOperations_returnsCorrectCount() {
-        long initialCount = userRepository.count();
-        
-        createTestUser("countuser1_" + System.currentTimeMillis());
-        createTestUser("countuser2_" + System.currentTimeMillis());
-        
-        assertEquals(initialCount + 2, userRepository.count());
+        try {
+            restTemplate.exchange(
+                    baseUrl() + "/api/v1/users/settings/cloud/get.json",
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+            fail("Expected 401 Unauthorized");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            assertEquals(HttpStatus.UNAUTHORIZED, e.getStatusCode());
+        }
     }
 }

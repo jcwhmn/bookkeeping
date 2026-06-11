@@ -350,3 +350,99 @@ After confirming any feature modification:
 
 // In ADMIN-GUIDE.md, add to relevant section if config needed
 ```
+
+## Frontend Design System
+
+The bookkeeping frontend uses a **Stripe-inspired hybrid design system** combining professional fintech aesthetics with Revolut-style visual elements.
+
+### Design Files
+
+| File | Purpose |
+|------|---------|
+| `plugins/vuetify.ts` | Vuetify theme with Stripe colors and component defaults |
+| `assets/css/design-tokens.css` | CSS custom properties (design tokens) |
+| `assets/css/global.css` | Global styles, utilities, tabular figures |
+
+### Color Palette
+
+```css
+/* Primary - Indigo */
+--stripe-primary: #533afd;
+--stripe-primary-deep: #4434d4;
+--stripe-primary-press: #2e2b8c;
+
+
+/* Canvas & Backgrounds */
+--stripe-canvas: #ffffff;
+--stripe-canvas-soft: #f6f9fc;
+
+/* Text */
+--stripe-ink: #0d253d;
+--stripe-ink-mute: #64748d;
+
+/* Financial Colors */
+--stripe-positive: #1aae39;  /* Income */
+--stripe-negative: #ea2261; /* Expenses */
+
+/* Borders */
+--stripe-hairline: #e3e8ee;
+```
+
+
+### Typography
+
+```css
+font-family: 'Inter', system-ui, sans-serif;
+
+/* Money/numbers use tabular figures for alignment */
+.stripe-money {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+```
+
+### Component Defaults
+
+All Vuetify components are configured with Stripe defaults:
+- **VBtn**: Pill-shaped (`rounded: 'pill'`)
+- **VCard**: Hairline border, no elevation (`rounded: 'lg'`, `border: true`)
+- **VTextField**: Outlined variant with comfortable density
+
+### Utility Classes
+
+| Class | Purpose |
+|-------|---------|
+| `.stripe-money` | Tabular figures for financial amounts |
+| `.stripe-card` | Card with hairline border and subtle shadow |
+| `.stripe-tag` | Pill badge with soft indigo background |
+| `.stripe-icon-gradient` | Gradient circle icon (Revolut style) |
+| `.stripe-table` | Table with hairline row separators |
+
+### Usage Examples
+
+```vue
+<!-- Money display with tabular figures -->
+<span class="stripe-money stripe-money-lg">$1,234.56</span>
+
+<!-- Income (green) vs Expense (red) -->
+<span class="stripe-money stripe-money-positive">+$5,000.00</span>
+<span class="stripe-money stripe-money-negative">-$1,234.56</span>
+
+
+<!-- Category tag -->
+<span class="stripe-tag">Groceries</span>
+
+<!-- Gradient icon -->
+<div class="stripe-icon-gradient">
+  <v-icon>mdi-food</v-icon>
+</div>
+```
+
+
+### Design Decisions
+
+See `openspec/changes/frontend-hybrid-redesign/` for full design documentation:
+- `proposal.md` - Why & what changes
+- `design.md` - Technical design & decisions
+- `specs/design-system/spec.md` - Detailed requirements
+- `tasks.md` - Implementation tasks

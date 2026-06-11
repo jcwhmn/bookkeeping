@@ -27,21 +27,22 @@ public class Category extends BaseEntity {
     private Long parentId;
 
     @Column
+    @Builder.Default
     private Integer sortOrder = 0;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean hidden = false;
 
-    // === Setters for updates ===
-    public void setName(String name) {
-        this.name = name;
-    }
+    @Column(length = 64)
+    private String icon;
 
-    public void setHidden(Boolean hidden) {
-        this.hidden = hidden;
-    }
+    @Column(length = 7)
+    private String color;
 
-    public void setSortOrder(Integer sortOrder) {
-        this.sortOrder = sortOrder;
-    }
+    @Column(length = 255)
+    private String comment;
+
+    // No setters - use toBuilder() pattern for all updates:
+    // category = category.toBuilder().name("new").icon("mdi-x").build();
 }

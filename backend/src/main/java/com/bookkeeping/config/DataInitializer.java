@@ -50,6 +50,12 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         try {
             User demoUser = createDemoUserIfNeeded();
+            // If user is new, createDemoUserIfNeeded() returns the new user.
+            // If user already exists, fetch them so we can still seed their data
+            // (accounts/categories/transactions) when missing.
+            if (demoUser == null) {
+                demoUser = userRepository.findByUsername("demo").orElse(null);
+            }
             if (demoUser != null) {
                 List<Account> accounts = createDemoAccounts(demoUser);
                 List<Category> categories = createDemoCategories(demoUser);
@@ -84,8 +90,8 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private List<Account> createDemoAccounts(User demoUser) {
-        if (accountRepository.count() > 0) {
-            log.info("Accounts already exist");
+        if (accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(demoUser.getId()).size() > 0) {
+            log.info("Accounts already exist for demo user");
             return accountRepository.findByUserIdAndDeletedFalseOrderBySortOrderAsc(demoUser.getId());
         }
         createAccount(demoUser, "Cash", AccountType.CASH, "USD", 150000L, "Daily cash expenses");
@@ -98,8 +104,8 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private List<Category> createDemoCategories(User demoUser) {
-        if (categoryRepository.count() > 0) {
-            log.info("Categories already exist");
+        if (categoryRepository.findByUserIdOrderBySortOrderAsc(demoUser.getId()).size() > 0) {
+            log.info("Categories already exist for demo user");
             return categoryRepository.findByUserIdOrderBySortOrderAsc(demoUser.getId());
         }
         // Income categories

@@ -13,7 +13,29 @@ export default defineNuxtConfig({
   css: [
     'vuetify/styles',
     '@mdi/font/css/materialdesignicons.css',
+    '~/assets/css/design-tokens.css',
+    '~/assets/css/global.css',
   ],
+
+  app: {
+    head: {
+      link: [
+        {
+          rel: 'preconnect',
+          href: 'https://fonts.googleapis.com',
+        },
+        {
+          rel: 'preconnect',
+          href: 'https://fonts.gstatic.com',
+          crossorigin: '',
+        },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+        },
+      ],
+    },
+  },
 
   build: {
     transpile: ['vuetify'],
@@ -53,7 +75,7 @@ export default defineNuxtConfig({
       name: 'Bookkeeping',
       short_name: 'Bookkeeping',
       description: 'Personal bookkeeping application',
-      theme_color: '#1976D2',
+      theme_color: '#533afd',
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'portrait-primary',
@@ -114,9 +136,13 @@ export default defineNuxtConfig({
     client: {
       installPrompt: true,
     },
+    // Disable PWA service worker generation in dev mode.
+    // workbox-build is CommonJS and cannot be dynamically require()'d in
+    // an ESM context (Nuxt 4 + Vite 7), causing "Dynamic require of
+    // 'workbox-build' is not supported" errors during `nuxt dev`.
+    // PWA is still generated in production builds (`nuxt build`).
     devOptions: {
-      enabled: true,
-      type: 'module',
+      enabled: false,
     },
   },
 })
